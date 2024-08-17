@@ -8,7 +8,7 @@ interface arithmetic_logic_if;
   // import types
   import cpu_types_pkg::*;
 
-  logic  [31:0] rda, rdb, result;
+  word_t rda, rdb, result;
   logic zero, negative, overflow;
 
 
