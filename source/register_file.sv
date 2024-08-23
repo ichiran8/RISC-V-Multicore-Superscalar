@@ -4,7 +4,7 @@ import cpu_types_pkg::*;
 
 module register_file(input logic CLK, nRST, register_file_if.rf rfif);
 
-logic [31:0] [31:0] registers;
+word_t [31:0] registers;
 
 always_ff @(posedge CLK, negedge nRST) begin
     if(!nRST) begin
