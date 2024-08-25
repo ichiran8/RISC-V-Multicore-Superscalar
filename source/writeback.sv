@@ -1,20 +1,24 @@
 `include "cpu_types_pkg.vh"
+`include "writeback_if.vh"
+
 import cpu_types_pkg::*;
 module writeback(
-    control_unit.cuif cif,
-    register_file_if.rf rfif
+    writeback_if.wb wbif
 );
-cif.alu_src = 0; // choosing whether or not we take a value to r2 or immediate
-    cif.regwrite = 0; // determine whether or not we write into a register
-    cif.memwrite = 0; // determine whether or not we write into memory
-    cif.memread = 0; // determine whether or not we are reading from memory
-    cif.memreg = 0; // determine whether or not we take the value from memory or the alu result to be written back 
-    cif.alu_op = ALU_ADD; // alu operation
-    cif.jump = 1'b0; // jump for JAL and JALR (write back block); I think AUIPC too?
+
 
 always_comb begin
-    rfif.wdat = '0;
-    if() begin
+    wbif.wdat = '0;
+    if(wbif.jump) begin
+        wbif.wdat = wbif.pc_add; // jal and jalr will have this where R[rd] = pc + 4;
+    end else if(wbif.memreg) begin
+        wbif.wdat = wbif.result;
+    end else if (wbif.cauipc) begin
+        wbif.wdat = wbif.pc + wbif.result;
+    end else if(!wbif.memreg) begin
+        wbif.wdat = wbif.memread_data;
+    end else begin
+        wbif.wdat = '0;
     end
 end
 

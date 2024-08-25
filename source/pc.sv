@@ -8,7 +8,7 @@ module pc(
     always_ff @(posedge CLK, negedge nRST) begin
         if(!nRST) begin
             prog.pc <= '0;
-        end else if (prog.opcode != 7'b1111111)begin
+        end else if (prog.opcode != 7'b1111111)begin // include the dHit and iHit signals
             prog.pc <= next_pc;
         end
     end
@@ -20,5 +20,5 @@ module pc(
             next_pc = prog.pc + 4; 
         end
     end
-
+    assign pc_add = prog.pc + 4;
 endmodule

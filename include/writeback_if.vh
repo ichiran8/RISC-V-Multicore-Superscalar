@@ -14,10 +14,11 @@ interface writeback_if;
   // import types
   import cpu_types_pkg::*;
 
-
+    word_t pc_add, result, wdat, pc;
+    logic jump, memreg, cauipc;
 
   // register file ports
-  modport rf (
+  modport wb (
     input   WEN, wsel, rsel1, rsel2, wdat,
     output  rdat1, rdat2
   );

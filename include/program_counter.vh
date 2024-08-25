@@ -14,18 +14,18 @@ interface program_counter_if;
   // import types
   import cpu_types_pkg::*;
 
-  word_t result, pc;
+  word_t result, pc, pc_add;
   logic pc_enable, branch;
   opcode_t opcode;
   // register file ports
   modport pc (
-    input opcode, pc_enable, result, branch, jump
+    input opcode, pc_enable, result, branch, jump, pc_add
     output pc;
   );
   // register file tb
   modport tb (
     input pc;
-    output opcode, pc_enable, result, branch, jump
+    output opcode, pc_enable, result, branch, jump, pc_add
   );
 endinterface
 

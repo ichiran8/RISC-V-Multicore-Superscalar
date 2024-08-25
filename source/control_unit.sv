@@ -82,12 +82,14 @@ always_comb begin
     cif.memreg = 0; // determine whether or not we take the value from memory or the alu result to be written back 
     cif.alu_op = ALU_ADD; // alu operation
     cif.jump = 1'b0; // jump for JAL and JALR (write back block); I think AUIPC too?
+    cif.cauipc = 1'b0; //auipc ctrl logic
     case(cif.opcode)
         RTYPE : begin
             cif.alu_src = 1'b0;
             cif.regwrite = 1'b1;
             cif.memwrite = 1'b0;
             cif.memreg = 1'b0;
+            cif.cauipc = 1'b0;
             case(cif.funct3_r) 
                 ADD_SUB : cif.alu_op = (cif.funct7_r == ADD) ? ALU_ADD : ALU_SUB;
                 SLL     : cif.alu_op = ALU_SLL;
@@ -105,6 +107,7 @@ always_comb begin
                     cif.memreg = 1'b0;
                     cif.alu_op = ALU_ADD;
                     cif.jump = 1'b0;
+                    cif.cauipc = 1'b0;
                 end
             endcase
         end
@@ -126,6 +129,7 @@ always_comb begin
                     cif.memreg = 1'b0;
                     cif.alu_op = ALU_ADD;
                     cif.jump = 1'b0;
+                    cif.cauipc = 1'b0;
                 end
             endcase
         end
@@ -137,6 +141,7 @@ always_comb begin
             cif.memreg = 1'b1; // we are trying to take the value that we read from memory and place it into a reg
             cif.alu_op = ALU_ADD;
             cif.jump = 1'b0;
+            cif.cauipc = 1'b0;
         end
         JALR : begin // you are jumping to a label and also linking the return address to the jump of the label (?)
                      // JALR also can add using mux because rs1 will be 0 here (default case); make sure to add to write back block
@@ -147,6 +152,7 @@ always_comb begin
             cif.memreg = 1'b0;
             cif.alu_op = ALU_ADD;
             cif.jump = 1'b1;
+            cif.cauipc = 1'b0;
         end
         STYPE : begin // SW
             cif.alu_src = 1'b1;
@@ -156,6 +162,7 @@ always_comb begin
             cif.memreg = 1'bx;
             cif.alu_op = ALU_ADD;
             cif.jump = 1'b0;
+            cif.cauipc = 1'b0;
         end 
         BTYPE : begin
             case(cif.funct3_b) 
@@ -173,6 +180,7 @@ always_comb begin
                     cif.memreg = 1'b0;
                     cif.alu_op = ALU_ADD;
                     cif.jump = 1'b0;
+                    cif.cauipc = 1'b0;
                 end
             endcase
         end
@@ -184,6 +192,7 @@ always_comb begin
             cif.memreg = 1'b0;
             cif.alu_op = ALU_ADD;
             cif.jump = 1'b1;
+            cif.cauipc = 1'b0;
         end
         LUI : begin
             cif.alu_src = 1'b1;
@@ -193,6 +202,7 @@ always_comb begin
             cif.memreg = 1'b0;
             cif.alu_op = ALU_ADD;
             cif.jump = 1'b0;
+            cif.cauipc = 1'b0;
         end
         AUIPC : begin // make sure to add to write back block
             cif.alu_src = 1'b1;
@@ -201,7 +211,8 @@ always_comb begin
             cif.memread = 1'b0;
             cif.memreg = 1'b0;
             cif.alu_op = ALU_ADD;
-            cif.jump = 1'b1;
+            cif.jump = 1'b0;
+            cif.cauipc = 1'b1;
         end
         HALT : begin // might remove later since it isnt needed here x.x
             cif.alu_src = 1'bx;
@@ -211,6 +222,7 @@ always_comb begin
             cif.memreg = 1'bx;
             cif.alu_op = ALU_ADD;
             cif.jump = 1'bx;
+            cif.cauipc = 1'b0;
         end
         default : begin
             cif.alu_src = 1'b0;
@@ -220,6 +232,7 @@ always_comb begin
             cif.memreg = 1'b0;
             cif.alu_op = ALU_ADD;
             cif.jump = 1'b0;
+            cif.cauipc = 1'b0;
         end
     endcase
 end
