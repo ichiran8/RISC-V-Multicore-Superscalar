@@ -16,24 +16,16 @@ interface control_unit_if;
 
   word_t instruction, imm_gen;
   regbits_t wsel, rsel1, rsel2;
-  logic [11:0] imm_i;
-  logic [11:0] imm_s_b;
-  logic [19:0] imm_u_j;
-  funct3_r_t funct3_r;
-  funct3_i_t funct3_i;
-  funct3_ld_i_t funct3_ld_i;
-  funct3_s_t funct3_s;
   funct3_b_t funct3_b;
-  funct7_r_t funct7_r;
-  funct7_srla_r_t funct7_srla_r;
+
   opcode_t opcode;
   aluop_t alu_op;
-  logic alu_src, regwrite, memwrite, memread, memreg, jump, cauipc;
+  logic alu_src, regwrite, memwrite, memread, memreg, jump, cauipc, halt;
 
   // register file ports
   modport cuif (
     input   instruction,
-    output  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, opcode, funct3_r, funct3_i, funct3_ld_i, funct3_s, funct3_b, funct7_r, funct7_srla_r, imm_i, imm_s_b, imm_u_j, cauipc
+    output  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, opcode, funct3_b, cauipc, halt
   );
   // // register file tb
   // modport tb (

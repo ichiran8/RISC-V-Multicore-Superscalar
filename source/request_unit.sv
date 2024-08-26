@@ -43,7 +43,6 @@ module request_unit(
         next_dmemREN = 1'b0;
         next_dmemWEN = 1'b0;
         next_state = state;
-        ruif.pc_enable = 1'b0;
         next_dmemaddr = '0;
         next_imemaddr = '0;
         next_dmemstore = '0;
@@ -51,7 +50,6 @@ module request_unit(
         next_memdata = ruif.memread_data;
         case(state)
             IDLE: begin
-                ruif.pc_enable = 1'b1;
                 if(ruif.memread && !ruif.dhit) begin
                     next_state = DATA_READ;
                     next_dmemREN = 1'b1;
@@ -61,7 +59,7 @@ module request_unit(
                     next_dmemWEN = 1'b1;
                     next_dmemaddr = ruif.result;
                     next_dmemstore = ruif.memwrite_data;
-                end else if(ruif.opcode != HALT) begin
+                end else if(!cif.halt) begin
                     next_state = INSTRUCTION_READ;
                     next_imemaddr = ruif.pc;
                 end else begin
@@ -69,24 +67,37 @@ module request_unit(
                 end
             end
             DATA_READ : begin
-                ruif.pc_enable = 1'b0;
-                next_memdata = ruif.dmemload;
-                next_state = IDLE;
+                next_instruction = ruif.instruction;
+                next_memdata = ruif.memread_data;
+                next_state = state;
+                if(ruif.dhit) begin
+                    next_memdata = ruif.dmemload;
+                    next_state = IDLE;
+                end
+
             end
             DATA_WRITE : begin
-                ruif.pc_enable = 1'b0;
-                next_state = IDLE;
+                next_instruction = ruif.instruction;
+                next_state = state;
+                next_dmemstore = ruif.memwrite_data;
+                if(ruif.dhit) begin
+                    next_state = IDLE;
+                end
+
             end
             INSTRUCTION_READ : begin
-                ruif.pc_enable = 1'b0;
-                next_instruction = ruif.imemload;
-                next_state = IDLE;
+                next_instruction = ruif.instruction;
+                next_state = state;
+                next_imemaddr = ruif.imemaddr;
+                if(ruif.ihit) begin
+                    next_instruction = ruif.imemload;
+                    next_state = IDLE;
+                end
             end
             default : begin
                 next_dmemREN = 1'b0;
                 next_dmemWEN = 1'b0;
                 next_state = state;
-                ruif.pc_enable = 1'b0;
                 next_dmemaddr = '0;
                 next_imemaddr = '0;
                 next_dmemstore = '0;
@@ -95,7 +106,6 @@ module request_unit(
             end
         endcase
     
+    assign ruif.pc_enable = ruif.ihit;
     end
-assign ru.halt = 1'b1;
-assign ru.datomic = 1'b0;
 endmodule

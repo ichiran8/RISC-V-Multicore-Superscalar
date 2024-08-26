@@ -39,11 +39,7 @@ module datapath (
   alusrc_if src ();
   writeback_if wbif();
   branch_mux_if bif();
-
-
-
-
-
+//assign dpif.flushed = 1'b1;
 // assigning ports
 assign rfif.rsel1 = cif.rsel1;
 assign rfif.rsel2 = cif.rsel2;
@@ -78,7 +74,13 @@ assign bif.negative = aluif.negative;
 assign bif.overflow = aluif.overflow;
 assign bif.result = aluif.result;
 
-
+always_ff @(posedge CLK, negedge nRST) begin
+  if(!nRST) begin
+    dpif.halt <= 1'b0;
+  end else begin
+    dpif.halt <= (dpif.halt | cif.halt);
+  end
+end
 
 // assigning ports
 `ifndef MAPPED
@@ -121,15 +123,7 @@ assign bif.result = aluif.result;
     .\cif.rsel2 (cif.rsel2),
     .\cif.wsel (cif.wsel),
     .\cif.instruction (cif.instruction),
-    .\cif.imm_i (cif.imm_i),
-    .\cif.imm_u_j (cif.imm_u_j),
-    .\cif.imm_s_b (cif.imm_s_b),
-    .\cif.funct3_r (cif.funct3_r),
-    .\cif.funct3_i (cif.funct3_i),
-    .\cif.funct3_s (cif.funct3_s),
-    .\cif.funct3_b (cif.funct3_s),
-    .\cif.funct7_r (cif.funct7_r),
-    .\cif.funct7_srla_r (cif.funct7_srla_r),
+    .\cif.funct3_b (cif.funct3_b),
     .\cif.opcode (cif.opcode),
     .\cif.alu_op (cif.alu_op),
     .\cif.alu_src (cif.alu_src),
@@ -138,7 +132,8 @@ assign bif.result = aluif.result;
     .\cif.memread (cif.memread),
     .\cif.memreg (cif.memreg),
     .\cif.jump (cif.jump),
-    .\cif.cauipc (cif.cauipc)
+    .\cif.cauipc (cif.cauipc),
+    .\cif.halt (cif.halt)
   );
 `endif
 
@@ -160,23 +155,23 @@ assign bif.result = aluif.result;
   request_unit ru1(CLK, nRST, ru);
 `else
   request_unit ru1(
-    .\ru.ihit (dp.ihit),
-    .\ru.imemload (dp.imemload),
-    .\ru.dhit (dp.dhit),
-    .\ru.dmemload (dp.dmemload),
+    .\ru.ihit (dpif.ihit),
+    .\ru.imemload (dpif.imemload),
+    .\ru.dhit (dpif.dhit),
+    .\ru.dmemload (dpif.dmemload),
     .\ru.memread (ru.memread),
     .\ru.opcode (ru.opcode),
     .\ru.pc (ru.pc),
     .\ru.result (ru.result),
     .\ru.memwrite_data (ru.memwrite_data),
-    .\ru.halt (dp.halt),
-    .\ru.imemREN (dp.imemREN),
-    .\ru.imemaddr (dp.imemaddr),
-    .\ru.dmemREN (dp.dmemREN),
-    .\ru.dmemWEN (dp.dmemWEN),
-    .\ru.datomic (dp.datomic),
-    .\ru.dmemstore (dp.dmemstore),
-    .\ru.dmemaddr (dp.dmemaddr),
+    .\ru.halt (cif.halt),
+    .\ru.imemREN (dpif.imemREN),
+    .\ru.imemaddr (dpif.imemaddr),
+    .\ru.dmemREN (dpif.dmemREN),
+    .\ru.dmemWEN (dpif.dmemWEN),
+    .\ru.datomic (dpif.datomic),
+    .\ru.dmemstore (dpif.dmemstore),
+    .\ru.dmemaddr (dpif.dmemaddr),
     .\ru.pc_enable (ru.pc_enable),
     .\ru.instruction (ru.instruction),
     .\ru.memread_data (ru.memread_data)

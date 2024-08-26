@@ -38,8 +38,8 @@ interface request_unit_if;
 
  // datapath ports
   modport ru (
-    input   ihit, imemload, dhit, dmemload, memread, memwrite, opcode, pc, result, memwrite_data, 
-    output  halt, imemREN, imemaddr, dmemREN, dmemWEN, datomic,
+    input   ihit, imemload, dhit, dmemload, memread, memwrite, opcode, pc, result, memwrite_data, halt,
+    output  imemREN, imemaddr, dmemREN, dmemWEN, datomic,
             dmemstore, dmemaddr, pc_enable, instruction, memread_data
   );
 //   // register file tb
