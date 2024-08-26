@@ -225,16 +225,32 @@ always_comb begin
             cif.cauipc = 1'b0;
         end
         default : begin
-            cif.alu_src = 1'b0;
-            cif.regwrite = 1'b0;
-            cif.memwrite = 1'b0;
-            cif.memread = 1'b0;
-            cif.memreg = 1'b0;
-            cif.alu_op = ALU_ADD;
-            cif.jump = 1'b0;
-            cif.cauipc = 1'b0;
+            cif.alu_src = 1'b0; // not done ; debating on using it in the ctrl unit or simply the datapath
+            cif.regwrite = 1'b0; // done (this is WEN) ; register file
+            cif.memwrite = 1'b0; // done ; ru 
+            cif.memread = 1'b0; // done ; ru
+            cif.memreg = 1'b0; // done ; write bacl
+            cif.alu_op = ALU_ADD; // alu
+            cif.jump = 1'b0; // program counter
+            cif.cauipc = 1'b0; // done ; wruite back
         end
     endcase
 end
+
+
+// immediate generation;
+always_comb begin
+    case(cif.opcode)
+        ITYPE, ITYPE_LW, JALR : cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:20]};
+        STYPE : cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:25], cif.instruction[11:7]};
+        BTYPE : cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[7], cif.instruction[30:25], cif.instruction[11:8], 1'b0};
+        AUIPC, LUI : cif.imm_gen = {cif.instruction[31:12], 12'd0};
+        JAL : cif.imm_gen = {{12{cif.instruction[31]}}, cif.instruction[19:12], cif.instruction[20], cif.instruction[30:21],1'b0};
+        default : cif.imm_gen = '0;
+    endcase
+end
+
+
+
 
 endmodule

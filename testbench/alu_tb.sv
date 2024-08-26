@@ -36,7 +36,7 @@ module alu_tb;
     .\aluif.result (aluif.result),
     .\aluif.zero (aluif.zero),
     .\aluif.alu_op (aluif.alu_op),
-    .\aluif.overflow(aluif.overflow)
+    .\aluif.overflow (aluif.overflow)
   );
 `endif
 

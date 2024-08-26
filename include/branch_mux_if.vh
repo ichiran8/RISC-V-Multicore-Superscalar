@@ -19,7 +19,7 @@ interface branch_mux_if;
   word_t result;
   logic zero, negative, overflow;
   // register file ports
-  modport bm (
+  modport br (
     input branch_type, zero, negative, overflow, result,
     output branch
   );

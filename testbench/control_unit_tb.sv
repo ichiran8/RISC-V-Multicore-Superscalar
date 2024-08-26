@@ -39,6 +39,7 @@ module control_unit_tb;
     .\cif.wsel(cif.wsel),
     .\cif.instruction(cif.instruction),
     .\cif.imm_i(cif.imm_i),
+    .\cif.imm_u_j(cif.imm_u_j),
     .\cif.imm_s_b(cif.imm_s_b),
     .\cif.funct3_r(cif.funct3_r),
     .\cif.funct3_i(cif.funct3_i),
@@ -53,9 +54,14 @@ module control_unit_tb;
     .\cif.memwrite(cif.memwrite),
     .\cif.memread(cif.memread),
     .\cif.memreg(cif.memreg),
-    .\cif.jump(cif.jump)
+    .\cif.jump(cif.jump),
+    .\cif.rsel1(cif.rsel1),
+    .\cif.rsel2(cif.rsel2),
+    .\cif.wsel(cif.wsel)
+    .\cif.cauipc(cif.cauipc)
   );
 `endif
+
 
 endmodule
 

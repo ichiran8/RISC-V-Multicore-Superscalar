@@ -4,13 +4,17 @@
 
   register file interface
 */
-`ifndef REGISTER_FILE_IF_VH
-`define REGISTER_FILE_IF_VH
+`ifndef REQUEST_UNIT_IF_VH
+`define REQUEST_UNIT_IF_VH
 
 // all types
 `include "cpu_types_pkg.vh"
 
-interface register_file_if;
+
+
+
+
+interface request_unit_if;
   // import types
   import cpu_types_pkg::*;
   
@@ -25,16 +29,18 @@ interface register_file_if;
 
 // Dcache signals
   // hit, atomic and enables
-  logic               dhit, datomic, dmemREN, dmemWEN, flushed, memwrite, memread;
+  logic               dhit, datomic, dmemREN, dmemWEN, flushed, memwrite, memread, pc_enable;
   // data and address
-  word_t              dmemload, dmemstore, dmemaddr, result, pc;
+  word_t              dmemload, dmemstore, dmemaddr, result, pc, instruction, memread_data, memwrite_data;
+
+  opcode_t opcode;
 
 
  // datapath ports
   modport ru (
-    input   ihit, imemload, dhit, dmemload, memread, memwrite,
+    input   ihit, imemload, dhit, dmemload, memread, memwrite, opcode, pc, result, memwrite_data, 
     output  halt, imemREN, imemaddr, dmemREN, dmemWEN, datomic,
-            dmemstore, dmemaddr
+            dmemstore, dmemaddr, pc_enable, instruction, memread_data
   );
 //   // register file tb
 //   modport tb (

@@ -4,25 +4,24 @@
 
   register file interface
 */
-`ifndef WRITEBACK_IF_VH
-`define WRITEBACK_IF_VH
+`ifndef ALUSRC_IF_VH
+`define ALUSRC_IF_VH
 
 // all types
 `include "cpu_types_pkg.vh"
 
-interface writeback_if;
+interface alusrc_if;
   // import types
   import cpu_types_pkg::*;
 
-    word_t pc_add, result, wdat, pc, memread_data;
-    logic jump, memreg, cauipc;
-
+  word_t imm_gen, rdat2, portB;
+  logic alu_src;
   // register file ports
-  modport wb (
-    input   pc_add, result, pc, jump, memreg, cauipc,
-    output  memread_data, wdat
+  modport src (
+    input   imm_gen, rdat2, alu_src,
+    output  portB
   );
-  // register file tb
+//   // register file tb
 //   modport tb (
 //     input   rdat1, rdat2,
 //     output  WEN, wsel, rsel1, rsel2, wdat

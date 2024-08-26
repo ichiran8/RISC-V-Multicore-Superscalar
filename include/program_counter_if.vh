@@ -15,18 +15,18 @@ interface program_counter_if;
   import cpu_types_pkg::*;
 
   word_t result, pc, pc_add;
-  logic pc_enable, branch;
+  logic pc_enable, branch, jump;
   opcode_t opcode;
   // register file ports
-  modport pc (
-    input opcode, pc_enable, result, branch, jump, pc_add
-    output pc;
+  modport pcp (
+    input opcode, pc_enable, result, branch, jump,
+    output pc, pc_add
   );
   // register file tb
-  modport tb (
-    input pc;
-    output opcode, pc_enable, result, branch, jump, pc_add
-  );
+  // modport tb (
+  //   input pc;
+  //   output opcode, pc_enable, result, branch, jump, pc_add
+  // );
 endinterface
 
 `endif //REGISTER_FILE_IF_VH
