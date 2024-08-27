@@ -16,7 +16,6 @@
 `include "control_unit_if.vh"
 `include "program_counter_if.vh"
 `include "request_unit_if.vh"
-`include "alusrc_if.vh"
 `include "writeback_if.vh"
 `include "branch_mux_if.vh"
 
@@ -36,38 +35,66 @@ module datapath (
   arithmetic_logic_if aluif ();
   program_counter_if prog ();
   request_unit_if ru();
-  alusrc_if src ();
+//  alusrc_if src ();
   writeback_if wbif();
   branch_mux_if bif();
 //assign dpif.flushed = 1'b1;
 // assigning ports
+
+word_t portB;
+
+assign portB = (cif.alu_src) ? cif.imm_gen : rfif.rdat2;
+
+ // datapath ports
+
+
+assign dpif.imemREN = ru.imemREN;
+assign dpif.dmemREN = ru.dmemREN;
+assign dpif.dmemWEN = ru.dmemWEN;
+
+assign dpif.imemaddr = prog.pc;
+assign dpif.dmemstore = rfif.rdat2;
+assign dpif.dmemaddr = (cif.memread || cif.memwrite) ? aluif.result : '0;
+
+word_t previous_instruction;
+always_ff @(posedge CLK) begin
+  previous_instruction <= cif.instruction;
+end
+
+assign cif.instruction = (dpif.ihit) ? dpif.imemload : previous_instruction;
+assign wbif.memread_data = (dpif.dhit) ? dpif.dmemload : '0;
+assign prog.pc_enable = ru.pc_enable;
+
+assign ru.ihit = dpif.ihit;
+assign ru.dhit = dpif.dhit;
+assign ru.memread = cif.memread;
+assign ru.memwrite = cif.memwrite;
+
 assign rfif.rsel1 = cif.rsel1;
 assign rfif.rsel2 = cif.rsel2;
 assign rfif.wsel = cif.wsel;
-assign rfif.wdat = wbif.memread_data;
+assign rfif.wdat = wbif.wdat;
+assign rfif.WEN = cif.regwrite;
+
 assign aluif.rda = rfif.rdat1;
-assign aluif.rdb = src.portB;
+assign aluif.rdb = portB;
 assign aluif.alu_op = cif.alu_op;
-assign cif.instruction = ru.instruction;
 assign prog.opcode = cif.opcode;
-assign prog.pc_enable = ru.pc_enable;
+
 assign prog.result = aluif.result;
 assign prog.jump = cif.jump;
 assign prog.branch = bif.branch;
-assign ru.opcode = cif.opcode;
-assign ru.memread = cif.memread;
-assign ru.memwrite = cif.memwrite;
-assign ru.pc = prog.pc;
-assign ru.result = aluif.result;
-assign ru.memwrite_data = rfif.rdat2;
-assign src.imm_gen = cif.imm_gen;
-assign src.rdat2 = rfif.rdat2;
-assign src.alu_src = cif.alu_src;
+assign prog.imm_gen = cif.imm_gen; 
+assign prog.jalr = cif.jalr;
+
 assign wbif.pc_add = prog.pc_add;
 assign wbif.result = aluif.result;
 assign wbif.pc = prog.pc;
+assign wbif.jalr = cif.jalr;
+assign wbif.jump = cif.jump;
 assign wbif.memreg = cif.memreg;
 assign wbif.cauipc = cif.cauipc;
+
 assign bif.branch_type = cif.funct3_b;
 assign bif.zero = aluif.zero;
 assign bif.negative = aluif.negative;
@@ -133,7 +160,8 @@ end
     .\cif.memreg (cif.memreg),
     .\cif.jump (cif.jump),
     .\cif.cauipc (cif.cauipc),
-    .\cif.halt (cif.halt)
+    .\cif.halt (cif.halt),
+    .\cif.jalr (cif.jalr)
   );
 `endif
 
@@ -147,7 +175,9 @@ end
     .\prog.branch (prog.branch),
     .\prog.jump (prog.jump),
     .\prog.pc_add (prog.pc_add),
-    .\prog.pc (prog.pc)
+    .\prog.pc (prog.pc),
+    .\prog.imm_gen (prog.imm_gen),
+    .\prog.jalr (prog.jalr)
   );
 `endif
 
@@ -155,39 +185,18 @@ end
   request_unit ru1(CLK, nRST, ru);
 `else
   request_unit ru1(
-    .\ru.ihit (dpif.ihit),
-    .\ru.imemload (dpif.imemload),
-    .\ru.dhit (dpif.dhit),
-    .\ru.dmemload (dpif.dmemload),
+    .\ru.ihit (ru.ihit),
+    .\ru.dhit (ru.dhit),
+    .\ru.dmemload (ru.dmemload),
     .\ru.memread (ru.memread),
-    .\ru.opcode (ru.opcode),
-    .\ru.pc (ru.pc),
-    .\ru.result (ru.result),
-    .\ru.memwrite_data (ru.memwrite_data),
-    .\ru.halt (cif.halt),
-    .\ru.imemREN (dpif.imemREN),
-    .\ru.imemaddr (dpif.imemaddr),
-    .\ru.dmemREN (dpif.dmemREN),
-    .\ru.dmemWEN (dpif.dmemWEN),
-    .\ru.datomic (dpif.datomic),
-    .\ru.dmemstore (dpif.dmemstore),
-    .\ru.dmemaddr (dpif.dmemaddr),
-    .\ru.pc_enable (ru.pc_enable),
-    .\ru.instruction (ru.instruction),
-    .\ru.memread_data (ru.memread_data)
+    .\ru.memwrite (ru.memwrite),
+    .\ru.imemREN (ru.imemREN),
+    .\ru.dmemWEN (ru.imemWEN),
+    .\ru.dmemREN (ru.dmemREN)
   );
 `endif
 
-`ifndef MAPPED
-  alusrc asc(src);
-`else
-  alusrc asc(
-    .\src.imm_gen (src.imm_gen),
-    .\src.rdat2 (src.rdat2),
-    .\src.alu_src (src.alu_src),
-    .\src.portB (src.portB)
-  );
-`endif
+
 
 `ifndef MAPPED
   writeback wb(wbif);
@@ -200,7 +209,8 @@ end
     .\wbif.memreg (wbif.memreg),
     .\wbif.cauipc (wbif.cauipc),
     .\wbif.memread_data (wbif.memread_data),
-    .\wbif.wdat (wbif.wdat)
+    .\wbif.wdat (wbif.wdat),
+    .\wbif.jalr (wbif.jalr)
   );
   `endif
 

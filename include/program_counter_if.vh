@@ -15,11 +15,12 @@ interface program_counter_if;
   import cpu_types_pkg::*;
 
   word_t result, pc, pc_add;
-  logic pc_enable, branch, jump;
+  logic pc_enable, branch, jump, jalr;
+  word_t imm_gen;
   opcode_t opcode;
   // register file ports
   modport pcp (
-    input opcode, pc_enable, result, branch, jump,
+    input opcode, pc_enable, result, branch, jump,  imm_gen, jalr, 
     output pc, pc_add
   );
   // register file tb

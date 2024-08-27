@@ -26,7 +26,7 @@ always_comb begin
     cif.funct3_b = funct3_b_t'(3'h2); // ^
     funct3_ld_i = funct3_ld_i_t'('0);
     cif.imm_gen = '0;
-    case(cif.opcode)
+    casex(cif.opcode)
         RTYPE : begin
             funct3_r = funct3_r_t'(cif.instruction[14:12]);
             funct7_r = funct7_r_t'(cif.instruction[31:25]);
@@ -92,7 +92,8 @@ always_comb begin
     cif.jump = 1'b0; // jump for JAL and JALR (write back block); I think AUIPC too?
     cif.cauipc = 1'b0; //auipc ctrl logic
     cif.halt = 1'b0;
-    case(cif.opcode)
+    cif.jalr = 1'b0;
+    casex(cif.opcode)
         RTYPE : begin
             cif.alu_src = 1'b0;
             cif.regwrite = 1'b1;
@@ -103,7 +104,8 @@ always_comb begin
             cif.jump = 1'b0;
             cif.cauipc = 1'b0;
             cif.halt = 1'b0;
-            case(funct3_r) 
+            cif.jalr = 1'b0;
+            casex(funct3_r) 
                 ADD_SUB : cif.alu_op = (funct7_r == ADD) ? ALU_ADD : ALU_SUB;
                 SLL     : cif.alu_op = ALU_SLL;
                 SLT     : cif.alu_op = ALU_SLT;
@@ -124,6 +126,7 @@ always_comb begin
             cif.jump = 1'b0; // not jumping 
             cif.cauipc = 1'b0; // no auipc
             cif.halt = 1'b0; // no halt
+            cif.jalr = 1'b0;
             case(funct3_i) 
                 ADDI  : cif.alu_op = ALU_ADD;
                 SLLI  : cif.alu_op = ALU_SLL;
@@ -144,6 +147,7 @@ always_comb begin
             cif.alu_op = ALU_ADD; // we have to add the address 
             cif.jump = 1'b0; // we are not going to jump 
             cif.cauipc = 1'b0; // no cauipc
+            cif.jalr = 1'b0;
         end
         JALR : begin // you are jumping to a label and also linking the return address to the jump of the label (?)
                      // JALR also can add using mux because rs1 will be 0 here (default case); make sure to add to write back block
@@ -153,31 +157,34 @@ always_comb begin
             cif.memread = 1'b0; // we are not reading from memory 
             cif.memreg = 1'b0; // we are taking the alu result value, and not the memory result 
             cif.alu_op = ALU_ADD; // we are adding to produce the offset in memory 
-            cif.jump = 1'b1; // we are jumping 
+            cif.jump = 1'b0; // we are jumping 
             cif.cauipc = 1'b0; // no cauipc
             cif.halt = 1'b0; // no halt
+            cif.jalr = 1'b1;
         end
         STYPE : begin // SW
             cif.alu_src = 1'b1; // we are taking the immediate value.
-            cif.regwrite = 1'b0;
-            cif.memwrite = 1'b1;
-            cif.memread = 1'b0;
-            cif.memreg = 1'bx;
+            cif.regwrite = 1'b0; // we are not writing into a register 
+            cif.memwrite = 1'b1; // we are writing to memory 
+            cif.memread = 1'b0; // we are not reading from memory 
+            cif.memreg = 1'b0; // dont care since we are not writing into a register
             cif.alu_op = ALU_ADD;
             cif.jump = 1'b0;
             cif.cauipc = 1'b0;
             cif.halt = 1'b0;
+            cif.jalr = 1'b0;
         end 
         BTYPE : begin
-            cif.alu_src = 1'b1;
+            cif.alu_src = 1'b0;
             cif.regwrite = 1'b0;
             cif.memwrite = 1'b0;
             cif.memread = 1'b0;
-            cif.memreg = 1'bx;
+            cif.memreg = 1'b0;
             cif.alu_op = ALU_ADD;
             cif.jump = 1'b0;
             cif.cauipc = 1'b0;
             cif.halt = 1'b0;
+            cif.jalr = 1'b0;
             case(cif.funct3_b) 
                 BEQ : cif.alu_op = ALU_SUB;
                 BNE : cif.alu_op = ALU_SUB;
@@ -197,6 +204,7 @@ always_comb begin
             cif.jump = 1'b1;
             cif.cauipc = 1'b0;
             cif.halt = 1'b0;
+            cif.jalr = 1'b0;
         end
         LUI : begin
             cif.alu_src = 1'b1;
@@ -208,6 +216,7 @@ always_comb begin
             cif.jump = 1'b0;
             cif.cauipc = 1'b0;
             cif.halt = 1'b0;
+            cif.jalr = 1'b0;
         end
         AUIPC : begin // make sure to add to write back block
             cif.alu_src = 1'b1;
@@ -219,17 +228,19 @@ always_comb begin
             cif.jump = 1'b0;
             cif.cauipc = 1'b1;
             cif.halt = 1'b0;
+            cif.jalr = 1'b0;
         end
         HALT : begin // might remove later since it isnt needed here x.x
-            cif.alu_src = 1'bx;
-            cif.regwrite = 1'bx;
-            cif.memwrite = 1'bx;
-            cif.memread = 1'bx;
-            cif.memreg = 1'bx;
+            cif.alu_src = 1'b0;
+            cif.regwrite = 1'b0;
+            cif.memwrite = 1'b0;
+            cif.memread = 1'b0;
+            cif.memreg = 1'b0;
             cif.alu_op = ALU_ADD;
-            cif.jump = 1'bx;
+            cif.jump = 1'b0;
             cif.cauipc = 1'b0;
             cif.halt = 1'b1;
+            cif.jalr = 1'b0;
         end
         default : begin
             cif.alu_src = 1'b0; // not done ; debating on using it in the ctrl unit or simply the datapath
@@ -241,6 +252,7 @@ always_comb begin
             cif.jump = 1'b0; // program counter
             cif.cauipc = 1'b0; // done ; wruite back
             cif.halt = 1'b0;
+            cif.jalr = 1'b0;
         end
     endcase
 end

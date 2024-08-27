@@ -29,18 +29,16 @@ interface request_unit_if;
 
 // Dcache signals
   // hit, atomic and enables
-  logic               dhit, datomic, dmemREN, dmemWEN, flushed, memwrite, memread, pc_enable;
+  logic               dhit, dmemREN, dmemWEN, flushed, memwrite, memread, pc_enable;
   // data and address
   word_t              dmemload, dmemstore, dmemaddr, result, pc, instruction, memread_data, memwrite_data;
 
-  opcode_t opcode;
 
 
  // datapath ports
   modport ru (
-    input   ihit, imemload, dhit, dmemload, memread, memwrite, opcode, pc, result, memwrite_data, halt,
-    output  imemREN, imemaddr, dmemREN, dmemWEN, datomic,
-            dmemstore, dmemaddr, pc_enable, instruction, memread_data
+    input   ihit, dhit, memread, memwrite,
+    output  imemREN, dmemREN, dmemWEN, pc_enable
   );
 //   // register file tb
 //   modport tb (

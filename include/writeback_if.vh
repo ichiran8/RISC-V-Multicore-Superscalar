@@ -15,11 +15,11 @@ interface writeback_if;
   import cpu_types_pkg::*;
 
     word_t pc_add, result, wdat, pc, memread_data;
-    logic jump, memreg, cauipc;
+    logic jump, memreg, cauipc, jalr;
 
   // register file ports
   modport wb (
-    input   pc_add, result, pc, jump, memreg, cauipc,
+    input   pc_add, result, pc, jump, memreg, cauipc, jalr,
     output  memread_data, wdat
   );
   // register file tb

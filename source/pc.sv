@@ -17,8 +17,12 @@ module pc(
     end
 
     always_comb begin
-        if(prog.branch || prog.jump) begin
+        if(prog.jump) begin
             next_pc = prog.pc + prog.result;
+        end else if (prog.jalr) begin
+            next_pc = prog.result;
+        end else if (prog.branch) begin
+            next_pc = prog.pc + prog.imm_gen;
         end else begin
             next_pc = prog.pc + 4; 
         end

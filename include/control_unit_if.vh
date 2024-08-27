@@ -20,12 +20,12 @@ interface control_unit_if;
 
   opcode_t opcode;
   aluop_t alu_op;
-  logic alu_src, regwrite, memwrite, memread, memreg, jump, cauipc, halt;
+  logic alu_src, regwrite, memwrite, memread, memreg, jump, cauipc, halt, jalr;
 
   // register file ports
   modport cuif (
     input   instruction,
-    output  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, opcode, funct3_b, cauipc, halt
+    output  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, opcode, funct3_b, cauipc, halt, jalr
   );
   // // register file tb
   // modport tb (

@@ -1,0 +1,3 @@
+halt
+
+org 0xFFFC
