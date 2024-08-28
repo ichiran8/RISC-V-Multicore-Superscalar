@@ -5,16 +5,6 @@ module request_unit(
     input logic CLK, nRST, request_unit_if.ru ruif
 );
 
-    typedef enum logic [2:0] {
-        IDLE, INSTRUCTION_READ, DATA_READ, DATA_WRITE
-    } state_t;
-
-    state_t state, next_state;
-    logic next_dmemREN, next_dmemWEN;
-
-    logic previous_dhit;    
-    word_t next_instruction, next_memdata, next_dmemstore, next_dmemaddr, next_imemaddr, previous_imemaddr;
-
     always_ff @(posedge CLK, negedge nRST) begin
         if(!nRST) begin
             ruif.imemREN <= '0;
@@ -22,8 +12,8 @@ module request_unit(
             ruif.dmemREN <= '0;
         end else begin
             ruif.imemREN <= 1'b1;
-            ruif.dmemWEN <= (!ruif.dhit && ruif.memwrite);
-            ruif.dmemREN <= (!ruif.dhit && ruif.memread); 
+            ruif.dmemWEN <= (!ruif.dhit & ruif.memwrite);
+            ruif.dmemREN <= (!ruif.dhit & ruif.memread); 
         end
     end
     assign ruif.pc_enable = ruif.ihit;

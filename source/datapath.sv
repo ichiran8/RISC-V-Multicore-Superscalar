@@ -54,15 +54,18 @@ assign dpif.dmemWEN = ru.dmemWEN;
 
 assign dpif.imemaddr = prog.pc;
 assign dpif.dmemstore = rfif.rdat2;
-assign dpif.dmemaddr = (cif.memread || cif.memwrite) ? aluif.result : '0;
+// assign dpif.dmemaddr = (cif.memread || cif.memwrite) ? aluif.result : '0;
+assign dpif.dmemaddr = aluif.result;
+// word_t previous_instruction;
+// always_ff @(posedge CLK) begin
+//   previous_instruction <= cif.instruction;
+// end
 
-word_t previous_instruction;
-always_ff @(posedge CLK) begin
-  previous_instruction <= cif.instruction;
-end
+// assign cif.instruction = (dpif.ihit) ? dpif.imemload : previous_instruction;
+// assign wbif.memread_data = (dpif.dhit) ? dpif.dmemload : '0;
 
-assign cif.instruction = (dpif.ihit) ? dpif.imemload : previous_instruction;
-assign wbif.memread_data = (dpif.dhit) ? dpif.dmemload : '0;
+assign cif.instruction = dpif.imemload;
+assign wbif.memread_data = dpif.dmemload;
 assign prog.pc_enable = ru.pc_enable;
 
 assign ru.ihit = dpif.ihit;

@@ -19,19 +19,10 @@ interface request_unit_if;
   import cpu_types_pkg::*;
   
   
- logic               halt;
-
 // Icache signals
   // hit and enable
-  logic               ihit, imemREN;
-  // instruction addr
-  word_t             imemload, imemaddr;
+  logic               ihit, imemREN, dhit, dmemREN, dmemWEN, memread, memwrite, pc_enable;
 
-// Dcache signals
-  // hit, atomic and enables
-  logic               dhit, dmemREN, dmemWEN, flushed, memwrite, memread, pc_enable;
-  // data and address
-  word_t              dmemload, dmemstore, dmemaddr, result, pc, instruction, memread_data, memwrite_data;
 
 
 

@@ -7,15 +7,21 @@ module branch_mux(
 );
 
     always_comb begin
+        bif.branch = 1'b0;
         case(bif.branch_type) 
-            BEQ: bif.branch = (bif.zero && !bif.overflow);
-            BNE: bif.branch = (!bif.zero && !bif.overflow); // double check later
-            BLT: bif.branch = (bif.result == 1); // double check ;later
-            BGE: bif.branch = (bif.zero || (!bif.negative && !bif.overflow));
-            BLTU: bif.branch = (bif.result == 1);
-            BGEU: bif.branch = (bif.result == 0);
-            default : bif.branch = 0;
+            BEQ, BGEU: bif.branch = (bif.zero);
+            BNE, BLT, BLTU: bif.branch = (!bif.zero); // double check later
+            //BLT: bif.branch = (!bif.zero); // double check ;later
+            BGE: bif.branch = (!bif.negative);
+            //BLTU: bif.branch = (!bif.zero);
+            //BGEU: bif.branch = (bif.zero);
         endcase
     end
 
+            // BEQ: bif.branch = (bif.zero && !bif.overflow);
+            // BNE: bif.branch = (!bif.zero && !bif.overflow); // double check later
+            // BLT: bif.branch = (bif.result == 1); // double check ;later
+            // BGE: bif.branch = (bif.zero || (!bif.negative && !bif.overflow));
+            // BLTU: bif.branch = (bif.result == 1);
+            // BGEU: bif.branch = (bif.result == 0);
 endmodule

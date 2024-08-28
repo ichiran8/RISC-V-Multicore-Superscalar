@@ -17,8 +17,6 @@ always_comb begin
         wbif.wdat = wbif.result;
     end else if(wbif.memreg) begin
         wbif.wdat = wbif.memread_data;
-    end else begin
-        wbif.wdat = '0;
     end
 end
 
