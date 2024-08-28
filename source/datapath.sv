@@ -109,122 +109,12 @@ always_ff @(posedge CLK, negedge nRST) begin
   end
 end
 
-// assigning ports
-`ifndef MAPPED
   register_file rf(CLK, nRST, rfif);
-`else
-  register_file rf(
-    .\rfif.rdat2 (rfif.rdat2),
-    .\rfif.rdat1 (rfif.rdat1),
-    .\rfif.wdat (rfif.wdat),
-    .\rfif.rsel2 (rfif.rsel2),
-    .\rfif.rsel1 (rfif.rsel1),
-    .\rfif.wsel (rfif.wsel),
-    .\rfif.WEN (rfif.WEN),
-    .\nRST (nRST),
-    .\CLK (CLK)
-  );
-`endif 
-`ifndef MAPPED
   alu alu(aluif);
-`else 
-  alu alu(
-    .\aluif.rda (aluif.rda),
-    .\aluif.rdb (aluif.rdb),
-    .\aluif.result (aluif.result),
-    .\aluif.zero (aluif.zero),
-    .\aluif.alu_op (aluif.alu_op),
-    .\aluif.overflow (aluif.overflow)
-  );
-`endif 
-
-    // a lot of control unit signals are internal
-
-
-
-  `ifndef MAPPED
-    control_unit cu1(cif);
-  `else
-    control_unit cu1(
-    .\cif.rsel1 (cif.rsel1),
-    .\cif.rsel2 (cif.rsel2),
-    .\cif.wsel (cif.wsel),
-    .\cif.instruction (cif.instruction),
-    .\cif.funct3_b (cif.funct3_b),
-    .\cif.opcode (cif.opcode),
-    .\cif.alu_op (cif.alu_op),
-    .\cif.alu_src (cif.alu_src),
-    .\cif.regwrite (cif.regwrite),
-    .\cif.memwrite (cif.memwrite),
-    .\cif.memread (cif.memread),
-    .\cif.memreg (cif.memreg),
-    .\cif.jump (cif.jump),
-    .\cif.cauipc (cif.cauipc),
-    .\cif.halt (cif.halt),
-    .\cif.jalr (cif.jalr)
-  );
-`endif
-
-`ifndef MAPPED
+  control_unit cu1(cif);
   pc pc(CLK, nRST, prog);
-`else
-  pc pc(
-    .\prog.opcode (prog.opcode),
-    .\prog.pc_enable (prog.pc_enable),
-    .\prog.result (prog.result),
-    .\prog.branch (prog.branch),
-    .\prog.jump (prog.jump),
-    .\prog.pc_add (prog.pc_add),
-    .\prog.pc (prog.pc),
-    .\prog.imm_gen (prog.imm_gen),
-    .\prog.jalr (prog.jalr)
-  );
-`endif
-
-`ifndef MAPPED
   request_unit ru1(CLK, nRST, ru);
-`else
-  request_unit ru1(
-    .\ru.ihit (ru.ihit),
-    .\ru.dhit (ru.dhit),
-    .\ru.dmemload (ru.dmemload),
-    .\ru.memread (ru.memread),
-    .\ru.memwrite (ru.memwrite),
-    .\ru.imemREN (ru.imemREN),
-    .\ru.dmemWEN (ru.imemWEN),
-    .\ru.dmemREN (ru.dmemREN)
-  );
-`endif
-
-
-
-`ifndef MAPPED
   writeback wb(wbif);
-`else
-  writeback wb(
-    .\wbif.pc_add (wbif.pc_add),
-    .\wbif.result (wbif.result),
-    .\wbif.pc (wbif.pc),
-    .\wbif.jump (wbif.jump),
-    .\wbif.memreg (wbif.memreg),
-    .\wbif.cauipc (wbif.cauipc),
-    .\wbif.memread_data (wbif.memread_data),
-    .\wbif.wdat (wbif.wdat),
-    .\wbif.jalr (wbif.jalr)
-  );
-  `endif
-
-`ifndef MAPPED
   branch_mux bm(bif);
-`else
-  branch_mux bm(
-    .\bif.branch_type (bif.branch_type),
-    .\bif.zero (bif.zero),
-    .\bif.negative (bif.negative),
-    .\bif.overflow (bif.overflow),
-    .\bif.result (bif.result),
-    .\bif.branch (bif.branch)
-  );
-`endif
 
 endmodule

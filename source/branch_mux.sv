@@ -18,4 +18,4 @@ module branch_mux(
         endcase
     end
 
-endmodule;
+endmodule

@@ -19,8 +19,8 @@ interface writeback_if;
 
   // register file ports
   modport wb (
-    input   pc_add, result, pc, jump, memreg, cauipc, jalr,
-    output  memread_data, wdat
+    input   pc_add, result, pc, jump, memreg, cauipc, jalr, memread_data,
+    output  wdat
   );
   // register file tb
 //   modport tb (

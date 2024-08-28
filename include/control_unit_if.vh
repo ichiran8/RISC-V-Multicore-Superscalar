@@ -5,7 +5,7 @@
   register file interface
 */
 `ifndef CONTROL_UNIT_IF_VH
-`define REGISTER_FILE_IF_VH
+`define CONTROL_UNIT_IF_VH
 
 // all types
 `include "cpu_types_pkg.vh"
