@@ -7,7 +7,7 @@ module alu(arithmetic_logic_if.aluds aluif);
 always_comb begin
     aluif.result = '0;
     aluif.overflow = 1'b0;
-    case(aluif.alu_op) 
+    casez(aluif.alu_op) 
         ALU_SLL : aluif.result = aluif.rda << aluif.rdb;
         ALU_SRL : aluif.result = aluif.rda >> aluif.rdb;
         ALU_SRA : aluif.result = $signed(aluif.rda) >>> $signed(aluif.rdb);
@@ -26,8 +26,8 @@ always_comb begin
         ALU_AND : aluif.result = aluif.rda & aluif.rdb;
         ALU_OR  : aluif.result = aluif.rda | aluif.rdb;
         ALU_XOR : aluif.result = aluif.rda ^ aluif.rdb;
-        ALU_SLT : aluif.result = (signed'(aluif.rda) < signed'(aluif.rdb)) ? 1 : 0;
-        ALU_SLTU : aluif.result = (unsigned'(aluif.rda) < unsigned'(aluif.rdb)) ? 1 : 0;
+        ALU_SLT : aluif.result = ($signed(aluif.rda) < $signed(aluif.rdb)) ? 1 : 0;
+        ALU_SLTU : aluif.result = ($unsigned(aluif.rda) < $unsigned(aluif.rdb)) ? 1 : 0;
     endcase    
 end
 

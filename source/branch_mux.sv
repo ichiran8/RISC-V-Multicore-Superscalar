@@ -8,14 +8,16 @@ module branch_mux(
 
     always_comb begin
         bif.branch = 1'b0;
-        case(bif.branch_type) 
-            BEQ, BGEU: bif.branch = (bif.zero);
-            BNE, BLT, BLTU: bif.branch = (!bif.zero); // double check later
-            //BLT: bif.branch = (!bif.zero); // double check ;later
-            BGE: bif.branch = (!bif.negative);
-            //BLTU: bif.branch = (!bif.zero);
-            //BGEU: bif.branch = (bif.zero);
-        endcase
+        if(bif.branch_bit) begin
+            casez(bif.branch_type) 
+                BEQ : bif.branch = (bif.zero);
+                BNE : bif.branch = (!bif.zero); // double check later
+                BLT: bif.branch = (!bif.zero); // double check ;later
+                BGE: bif.branch = (bif.zero);
+                BLTU: bif.branch = (!bif.zero);
+                BGEU: bif.branch = (bif.zero);
+            endcase
+        end
     end
 
             // BEQ: bif.branch = (bif.zero && !bif.overflow);

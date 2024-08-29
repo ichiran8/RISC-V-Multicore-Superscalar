@@ -25,10 +25,10 @@ module memory_control (
 
 assign ccif.iwait = (ccif.ramstate == BUSY || (ccif.dREN || ccif.dWEN));
 assign ccif.dwait = !(ccif.ramstate == ACCESS && (ccif.dREN || ccif.dWEN));
-assign ccif.iload = (ccif.ramstate == ACCESS && !ccif.dREN && !ccif.dWEN && ccif.iREN) ? ccif.ramload : '0; // this is the data we read from memory (to be loaded as an instruction)  
-assign ccif.dload = (ccif.ramstate == ACCESS && (ccif.dREN)) ? ccif.ramload : '0; // this is the data we read from memory (to be loaded as the write back or whatever (lw))
-assign ccif.ramstore = (ccif.ramstate == ACCESS && ccif.dWEN) ? ccif.dstore : '0;
-assign ccif.ramaddr = (ccif.dREN || ccif.dWEN) ?  ccif.daddr : (ccif.iREN) ? ccif.iaddr : '0; // if we want data 
+assign ccif.iload = (ccif.ramstate == ACCESS && !ccif.dREN && !ccif.dWEN && ccif.iREN) ? ccif.ramload : 0; // this is the data we read from memory (to be loaded as an instruction)  
+assign ccif.dload = (ccif.ramstate == ACCESS && (ccif.dREN)) ? ccif.ramload : 0; // this is the data we read from memory (to be loaded as the write back or whatever (lw))
+assign ccif.ramstore = (ccif.ramstate == ACCESS && ccif.dWEN) ? ccif.dstore : 0;
+assign ccif.ramaddr = (ccif.dREN || ccif.dWEN) ?  ccif.daddr : (ccif.iREN) ? ccif.iaddr : 0; // if we want data 
 assign ccif.ramWEN = ccif.dWEN;
 assign ccif.ramREN = ((ccif.dREN || ccif.iREN) && !ccif.dWEN);
 

@@ -11,20 +11,20 @@ module pc(
     always_ff @(posedge CLK, negedge nRST) begin
         if(!nRST) begin
             prog.pc <= '0;
-        end else if (prog.pc_enable)begin // include the dHit and iHit signals
+        end else if (prog.pc_enable) begin // include the dHit and iHit signals
             prog.pc <= next_pc;
         end
     end
 
     always_comb begin
-        next_pc = prog.pc + 4; 
-        if(prog.jump) begin
-            next_pc = prog.pc + prog.result;
-        end else if (prog.jalr) begin
-            next_pc = prog.result;
-        end else if (prog.branch) begin
-            next_pc = prog.pc + prog.imm_gen;
+            next_pc = prog.pc + 4; 
+            if(prog.jump) begin
+                next_pc = prog.pc + prog.result;
+            end else if (prog.jalr) begin
+                next_pc = prog.result;
+            end else if (prog.branch) begin
+                next_pc = prog.pc + prog.imm_gen;
+            end
         end
-    end
     assign prog.pc_add = prog.pc + 4;
 endmodule

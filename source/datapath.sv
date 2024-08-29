@@ -54,14 +54,14 @@ assign dpif.dmemWEN = ru.dmemWEN;
 
 assign dpif.imemaddr = prog.pc;
 assign dpif.dmemstore = rfif.rdat2;
-// assign dpif.dmemaddr = (cif.memread || cif.memwrite) ? aluif.result : '0;
+//ssign dpif.dmemaddr = (cif.memread || cif.memwrite) ? aluif.result : '0;
 assign dpif.dmemaddr = aluif.result;
-// word_t previous_instruction;
+//word_t previous_instruction;
 // always_ff @(posedge CLK) begin
 //   previous_instruction <= cif.instruction;
 // end
 
-// assign cif.instruction = (dpif.ihit) ? dpif.imemload : previous_instruction;
+//assign cif.instruction = (dpif.ihit) ? dpif.imemload : previous_instruction;
 // assign wbif.memread_data = (dpif.dhit) ? dpif.dmemload : '0;
 
 assign cif.instruction = dpif.imemload;
@@ -82,7 +82,6 @@ assign rfif.WEN = cif.regwrite;
 assign aluif.rda = rfif.rdat1;
 assign aluif.rdb = portB;
 assign aluif.alu_op = cif.alu_op;
-assign prog.opcode = cif.opcode;
 
 assign prog.result = aluif.result;
 assign prog.jump = cif.jump;
@@ -103,6 +102,7 @@ assign bif.zero = aluif.zero;
 assign bif.negative = aluif.negative;
 assign bif.overflow = aluif.overflow;
 assign bif.result = aluif.result;
+assign bif.branch_bit = cif.branch_bit;
 
 always_ff @(posedge CLK, negedge nRST) begin
   if(!nRST) begin
