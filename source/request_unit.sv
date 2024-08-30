@@ -12,8 +12,17 @@ module request_unit(
             ruif.dmemREN <= '0;
         end else begin
             ruif.imemREN <= 1'b1;
-            ruif.dmemWEN <= (!ruif.dhit & ruif.memwrite);
-            ruif.dmemREN <= (!ruif.dhit & ruif.memread); 
+            ruif.dmemWEN <= (ruif.dhit) ? 1'b0 : (ruif.ihit & ruif.memwrite) ? 1'b1 : ruif.dmemWEN;
+            ruif.dmemREN <= (ruif.dhit) ? 1'b0 : (ruif.ihit & ruif.memread) ? 1'b1 : ruif.dmemREN;
+
+            // if (ruif.dhit) begin
+            //     ruif.dmemWEN <= 1'b0;//(ruif.ihit & ruif.memwrite);
+            //     ruif.dmemREN <= 1'b0; //(ruif.ihit & ruif.memread); 
+            // end else if (ruif.ihit && ruif.memread) begin
+            //     ruif.dmemREN <= 1'b1;
+            // end else if (ruif.ihit && ruif.memwrite) begin
+            //     ruif.dmemWEN <= 1'b1;
+            // end
         end
     end
     assign ruif.pc_enable = ruif.ihit;

@@ -51,10 +51,10 @@ task automatic dump_memory();
     string filename = "memcpu.hex";
     int memfd;
 
-    syif.tbCTRL = 1;
-    syif.addr = 0;
-    syif.WEN = 0;
-    syif.REN = 0;
+    //cif0.tbCTRL = 1;
+    cif0.daddr = 0;
+    cif0.dWEN = 0;
+    cif0.dREN = 0;
 
     memfd = $fopen(filename,"w");
     if (memfd)
@@ -68,22 +68,22 @@ task automatic dump_memory();
       bit [7:0][7:0] values;
       string ihex;
 
-      syif.addr = i << 2;
-      syif.REN = 1;
+      cif0.daddr = i << 2;
+      cif0.dREN = 1;
       repeat (4) @(posedge CLK);
-      if (syif.load === 0)
+      if (cif0.dload === 0)
         continue;
-      values = {8'h04,16'(i),8'h00,syif.load};
+      values = {8'h04,16'(i),8'h00,cif0.dload};
       foreach (values[j])
         chksum += values[j];
       chksum = 16'h100 - chksum;
-      ihex = $sformatf(":04%h00%h%h",16'(i),syif.load,8'(chksum));
+      ihex = $sformatf(":04%h00%h%h",16'(i),cif0.dload,8'(chksum));
       $fdisplay(memfd,"%s",ihex.toupper());
     end //for
     if (memfd)
     begin
-      syif.tbCTRL = 0;
-      syif.REN = 0;
+      //cif0.tbCTRL = 0;
+      cif0.dREN = 0;
       $fdisplay(memfd,":00000001FF");
       $fclose(memfd);
       $display("Finished memory dump.");
@@ -189,7 +189,7 @@ initial begin
     end
     // store word
     #(100ns);
-    cif0.iREN = 1'b0;
+    cif0.iREN = 1'b1;
     cif0.dWEN = 1'b1;
     cif0.daddr = 32'hF1F1F1FC;
     for(i = 0; i < 30; i = i + 1) begin
@@ -199,14 +199,18 @@ initial begin
     end
 
     // load word
+    #(1000ns);
+    @(posedge CPUCLK);
+    cif0.iREN = 1'b0;
     cif0.dWEN = 1'b0;
-    cif0.dREN = 1'b0;
+    cif0.dREN = 1'b1;
     cif0.daddr = 32'hF1F1F1FC;
+    @(posedge CPUCLK);
     for(i = 0; i < 30; i = i + 1)begin
         cif0.daddr = cif0.daddr + 4;
         @(posedge CPUCLK);
     end
-    reset_dut();
+    //reset_dut();
     dump_memory();
     $stop(1);
 end

@@ -10,13 +10,15 @@ module pc(
     word_t next_pc;
     always_ff @(posedge CLK, negedge nRST) begin
         if(!nRST) begin
-            prog.pc <= '0;
-        end else if (prog.pc_enable) begin // include the dHit and iHit signals
+            prog.pc <= 0;
+        end else begin // include the dHit and iHit signals
             prog.pc <= next_pc;
         end
     end
 
     always_comb begin
+        next_pc = prog.pc;
+        if(prog.pc_enable) begin
             next_pc = prog.pc + 4; 
             if(prog.jump) begin
                 next_pc = prog.pc + prog.result;
@@ -26,5 +28,7 @@ module pc(
                 next_pc = prog.pc + prog.imm_gen;
             end
         end
+    end
+
     assign prog.pc_add = prog.pc + 4;
 endmodule

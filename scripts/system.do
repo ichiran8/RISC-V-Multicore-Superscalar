@@ -6,12 +6,12 @@ add wave -noupdate /system_tb/CLK
 add wave -noupdate /system_tb/nRST
 add wave -noupdate /system_tb/CLK
 add wave -noupdate /system_tb/nRST
+add wave -noupdate /system_tb/CLK
+add wave -noupdate /system_tb/nRST
 add wave -noupdate /system_tb/nRST
 add wave -noupdate /system_tb/nRST
 add wave -noupdate /system_tb/DUT/CPU/ccif/iaddr
-add wave -noupdate /system_tb/DUT/CPU/DP/cif/opcode
 add wave -noupdate /system_tb/DUT/CPU/DP/ru/dhit
-add wave -noupdate /system_tb/DUT/CPU/DP/ru/halt
 add wave -noupdate /system_tb/CLK
 add wave -noupdate /system_tb/DUT/CPU/CLK
 add wave -noupdate /system_tb/DUT/CPU/DP/ru/ihit
@@ -30,7 +30,7 @@ add wave -noupdate /system_tb/DUT/CPU/DP/ru/dmemWEN
 add wave -noupdate /system_tb/DUT/CPU/DP/ru/memwrite
 add wave -noupdate /system_tb/DUT/CPU/DP/ru/memread
 add wave -noupdate /system_tb/DUT/CPU/DP/ru/pc_enable
-add wave -noupdate -radix decimal /system_tb/DUT/CPU/DP/aluif/result
+add wave -noupdate -radix hexadecimal /system_tb/DUT/CPU/DP/aluif/result
 add wave -noupdate -radix decimal /system_tb/DUT/CPU/DP/cif/imm_gen
 add wave -noupdate /system_tb/DUT/CPU/DP/rfif/rsel1
 add wave -noupdate /system_tb/DUT/CPU/DP/rfif/rsel2
@@ -39,8 +39,13 @@ add wave -noupdate /system_tb/DUT/CPU/DP/rfif/rdat2
 add wave -noupdate /system_tb/DUT/CPU/DP/bif/branch_type
 add wave -noupdate /system_tb/DUT/CPU/DP/rf/registers
 add wave -noupdate /system_tb/DUT/CPU/DP/rfif/wsel
+add wave -noupdate /system_tb/DUT/prif/ramaddr
+add wave -noupdate /system_tb/DUT/prif/ramstore
+add wave -noupdate /system_tb/DUT/prif/ramWEN
+add wave -noupdate -radix hexadecimal /system_tb/DUT/prif/ramload
+add wave -noupdate /system_tb/DUT/prif/ramstate
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {2116911 ps} 0}
+WaveRestoreCursors {{Cursor 1} {853544 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 150
 configure wave -valuecolwidth 100
@@ -56,4 +61,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {1896 ns} {2212 ns}
+WaveRestoreZoom {607679 ps} {923679 ps}

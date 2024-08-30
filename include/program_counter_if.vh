@@ -20,7 +20,7 @@ interface program_counter_if;
   opcode_t opcode;
   // register file ports
   modport pcp (
-    input opcode, pc_enable, result, branch, jump,  imm_gen, jalr, 
+    input pc_enable, result, branch, jump,  imm_gen, jalr, 
     output pc, pc_add
   );
   // register file tb

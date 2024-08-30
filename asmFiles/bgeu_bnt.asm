@@ -1,12 +1,10 @@
 li $10, 5
 lui $11, 0xFFFFF
-
+li $12, 0
 bgeu $10, $11, end
-
-mv $12, $10
+sw $11, 0x100($12)
 
 halt
-
 end:
-    mv $12, $11
+    sw $10, 0x100($12)
     halt

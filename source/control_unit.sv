@@ -96,13 +96,13 @@ always_comb begin
         STYPE : begin // SW
             cif.alu_src = 1'b1; // we are taking the immediate value.
             cif.memwrite = 1'b1; // we are writing to memory 
-            cif.memreg = 1'b?;
+            //cif.memreg = 1'b?;
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:25], cif.instruction[11:7]};
 
         end 
         BTYPE : begin
             cif.branch_bit = 1'b1;
-            cif.memreg = 1'b?;
+            //cif.memreg = 1'b?;
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[7], cif.instruction[30:25], cif.instruction[11:8], 1'b0};
             casez(cif.funct3_b) 
                 BEQ : cif.alu_op = ALU_SUB;

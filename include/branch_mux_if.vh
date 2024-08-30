@@ -17,16 +17,16 @@ interface branch_mux_if;
   logic branch;
   funct3_b_t branch_type;
   word_t result;
-  logic zero, negative, overflow;
+  logic zero, negative, overflow, branch_bit;
   // register file ports
   modport br (
-    input branch_type, zero, negative, overflow, result,
+    input branch_type, zero, negative, overflow, result, branch_bit,
     output branch
   );
   // register file tb
   modport tb (
     input branch,
-    output branch_type, zero, negative, overflow, result
+    output branch_type, zero, negative, overflow, result, branch_bit
   );
 endinterface
 

@@ -77,7 +77,7 @@ assign rfif.rsel1 = cif.rsel1;
 assign rfif.rsel2 = cif.rsel2;
 assign rfif.wsel = cif.wsel;
 assign rfif.wdat = wbif.wdat;
-assign rfif.WEN = cif.regwrite;
+assign rfif.WEN = cif.regwrite & (dpif.dhit | dpif.ihit);
 
 assign aluif.rda = rfif.rdat1;
 assign aluif.rdb = portB;
@@ -103,6 +103,31 @@ assign bif.negative = aluif.negative;
 assign bif.overflow = aluif.overflow;
 assign bif.result = aluif.result;
 assign bif.branch_bit = cif.branch_bit;
+
+// word_t next_pc, pc;
+
+// always_ff @(posedge CLK, negedge nRST) begin
+//   if(!nRST) begin
+//     prog.pc <= '0;
+//   end else begin // include the dHit and iHit signals
+//       prog.pc <= next_pc;
+//   end
+// end
+
+// always_comb begin
+//   next_pc = pc;
+//   if(pc_enable & !(dpif.dmemREN | dpif.dmemWEN)) begin
+//     next_pc = pc + 4; 
+//     if(cif.jump) begin
+//       next_pc = pc + aluif.result;
+//       end else if (cif.jalr) begin
+//         next_pc = aluif.result;
+//       end else if (cif.branch) begin
+//         next_pc = pc + cif.imm_gen;
+//       end
+//     end
+// end
+    
 
 always_ff @(posedge CLK, negedge nRST) begin
   if(!nRST) begin
