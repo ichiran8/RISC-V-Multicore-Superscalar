@@ -15,7 +15,16 @@ module pc(
             prog.pc <= next_pc;
         end
     end
-
+    // always_comb begin
+    //         next_pc = prog.pc + 4; 
+    //         if(prog.jump) begin
+    //             next_pc = prog.pc + prog.result;
+    //         end else if (prog.jalr) begin
+    //             next_pc = prog.result;
+    //         end else if (prog.branch) begin
+    //             next_pc = prog.pc + prog.imm_gen;
+    //         end
+    // end
     always_comb begin
         next_pc = prog.pc;
         if(prog.pc_enable) begin

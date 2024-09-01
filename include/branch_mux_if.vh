@@ -15,18 +15,19 @@ interface branch_mux_if;
   import cpu_types_pkg::*;
 
   logic branch;
-  funct3_b_t branch_type;
+  //funct3_b_t branch_type;
+  logic [1:0] branch_type;
   word_t result;
   logic zero, negative, overflow, branch_bit;
   // register file ports
   modport br (
-    input branch_type, zero, negative, overflow, result, branch_bit,
+    input branch_type, zero, negative, overflow, result, //branch_bit,
     output branch
   );
   // register file tb
   modport tb (
     input branch,
-    output branch_type, zero, negative, overflow, result, branch_bit
+    output branch_type, zero, negative, overflow, result //branch_bit
   );
 endinterface
 

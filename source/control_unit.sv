@@ -7,7 +7,7 @@ module control_unit(
     control_unit_if.cuif cif
 );
 funct3_r_t funct3_r;
-//funct3_b_t funct3_b;
+funct3_b_t funct3_b;
 funct3_i_t funct3_i;
 funct7_r_t funct7_r;
 funct7_srla_r_t funct7_srla_r;
@@ -17,42 +17,43 @@ assign funct7_r = funct7_r_t'(cif.instruction[31:25]);
 assign funct7_srla_r = funct7_srla_r_t'(cif.instruction[31:25]);
 assign funct3_i = funct3_i_t'(cif.instruction[14:12]);
 
-assign cif.funct3_b = funct3_b_t'(cif.instruction[14:12]);
+assign funct3_b = funct3_b_t'(cif.instruction[14:12]);
 
 //assign cif.funct3_b = funct3_b_t'(cif.instruction[14:12]);
 opcode_t opcode;
 assign opcode = opcode_t'(cif.instruction[6:0]);
 
 // one more optimization concern is to add another signal for 
+assign cif.rsel1 = cif.instruction[19:15];
+assign cif.rsel2 = cif.instruction[24:20];
+assign cif.wsel = cif.instruction[11:7];
 always_comb begin
-    cif.rsel1 = cif.instruction[19:15];
-    cif.rsel2 = cif.instruction[24:20];
-    cif.wsel = cif.instruction[11:7];
     //cif.funct3_b = funct3_b_t'(3'h2); // ^
-    cif.imm_gen = 0;
-
-    cif.branch_bit = 1'b0;
+    cif.imm_gen = 0; // NOT A CONTROL SIGNAL
+    //cif.branch_bit = 1'b0;
     cif.alu_src = 1'b0; // choosing whether or not we take a value to r2 or immediate
-    cif.regwrite = 0; // determine whether or not we write into a register
+    cif.regwrite = 1; // determine whether or not we write into a register
     cif.memwrite = 0; // determine whether or not we write into memory
     cif.memread = 0; // determine whether or not we are reading from memory
     cif.memreg = 0; // determine whether or not we take the value from memory or the alu result to be written back 
-    cif.alu_op = ALU_ADD; // alu operation
+    cif.alu_op = ALU_ADD; // alu operation ; NOT A CONTROL SIGNAL (BASICALLY)
     cif.jump = 1'b0; // jump for JAL and JALR (write back block); I think AUIPC too?
     cif.cauipc = 1'b0; //auipc ctrl logic
     cif.halt = 1'b0;
     cif.jalr = 1'b0;
+    cif.branch_type = 2'd0;
+    cif.lui = 1'b0;
     casez(opcode)
         RTYPE : begin
-            cif.regwrite = 1'b1; 
+            //cif.regwrite = 1'b1; 
             casez(funct3_r) 
                // ADD_SUB : cif.alu_op = (funct7_r == ADD) ? ALU_ADD : ALU_SUB;
-               ADD_SUB : cif.alu_op = (cif.instruction[30]) ? ALU_SUB : ALU_ADD;
-                    // begin
-                    //     if(cif.instruction[30])  begin
-                    //         cif.alu_op = ALU_SUB;
-                    //     end
-                    // end
+               ADD_SUB : //cif.alu_op = (cif.instruction[30]) ? ALU_SUB;
+                    begin
+                        if(cif.instruction[30])  begin
+                            cif.alu_op = ALU_SUB;
+                        end
+                    end
                 SLL     : cif.alu_op = ALU_SLL;
                 SLT     : cif.alu_op = ALU_SLT;
                 SLTU    : cif.alu_op = ALU_SLTU;
@@ -65,7 +66,7 @@ always_comb begin
         end
         ITYPE : begin
             cif.alu_src = 1'b1; // we are taking the immediate value
-            cif.regwrite = 1'b1; // we are writing back into the register
+            //cif.regwrite = 1'b1; // we are writing back into the register
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:20]};
             casez(funct3_i) 
                // ADDI  : cif.alu_op = ALU_ADD;
@@ -80,7 +81,7 @@ always_comb begin
         end
         ITYPE_LW : begin
             cif.alu_src = 1'b1; // we are taking the immediate value 
-            cif.regwrite = 1'b1; // we are writing to the register 
+            //cif.regwrite = 1'b1; // we are writing to the register 
             cif.memread = 1'b1; // we are reading from memory
             cif.memreg = 1'b1; // we are trying to take the value that we read from memory and place it into a reg
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:20]};
@@ -89,7 +90,7 @@ always_comb begin
         JALR : begin // you are jumping to a label and also linking the return address to the jump of the label (?)
                      // JALR also can add using mux because rs1 will be 0 here (default case); make sure to add to write back block
             cif.alu_src = 1'b1; // we are taking the immediate value 
-            cif.regwrite = 1'b1; // we are writing back into a register
+            //cif.regwrite = 1'b1; // we are writing back into a register
             cif.jalr = 1'b1;
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:20]};
         end
@@ -97,41 +98,63 @@ always_comb begin
             cif.alu_src = 1'b1; // we are taking the immediate value.
             cif.memwrite = 1'b1; // we are writing to memory 
             //cif.memreg = 1'b?;
+            cif.regwrite = 1'b0;
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:25], cif.instruction[11:7]};
 
         end 
         BTYPE : begin
-            cif.branch_bit = 1'b1;
+            //cif.branch_bit = 1'b1;
             //cif.memreg = 1'b?;
+            cif.regwrite = 1'b0;
+            cif.branch_type = 2'd1; //? Maybe not, because then ...
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[7], cif.instruction[30:25], cif.instruction[11:8], 1'b0};
-            casez(cif.funct3_b) 
-                BEQ : cif.alu_op = ALU_SUB;
-                BNE : cif.alu_op = ALU_SUB;
-                BLT : cif.alu_op = ALU_SLT;
-                BGE : cif.alu_op = ALU_SLT;
-                BLTU : cif.alu_op = ALU_SLTU;
-                BGEU : cif.alu_op = ALU_SLTU;
+            casez(funct3_b) 
+                BEQ : begin
+                    cif.alu_op = ALU_SUB;
+                   // cif.branch_type = 2'd1;
+                end
+                BNE : begin
+                    cif.alu_op = ALU_SUB;
+                    cif.branch_type = 2'd2;
+                end
+                BLT : begin 
+                    cif.alu_op = ALU_SLT;
+                    cif.branch_type = 2'd2;
+                end
+                BGE : begin
+                     cif.alu_op = ALU_SLT;
+                   //  cif.branch_type = 2'd1;
+                end
+                BLTU : begin
+                     cif.alu_op = ALU_SLTU;
+                     cif.branch_type = 2'd2;
+                end
+                BGEU : begin
+                    cif.alu_op = ALU_SLTU;
+                   // cif.branch_type = 2'd1;
+                end
             endcase
         end
         JAL: begin // TO DO, add jump stuff for jalr and JAL; make sure to add to write back block
-            cif.rsel1 = 0;
-            cif.alu_src = 1'b1;
-            cif.regwrite = 1'b1;
+            //cif.rsel1 = 0;
+            //cif.alu_src = 1'b1;
+            //cif.regwrite = 1'b1;
             cif.jump = 1'b1;
             cif.imm_gen = {{12{cif.instruction[31]}}, cif.instruction[19:12], cif.instruction[20], cif.instruction[30:21],1'b0};
 
         end
         LUI : begin
-            cif.rsel1 = 0;
-            cif.alu_src = 1'b1;
-            cif.regwrite = 1'b1;
+           // cif.rsel1 = 0;
+            //cif.alu_src = 1'b1;
+            cif.lui = 1'b1;
+            //cif.regwrite = 1'b1;
             cif.imm_gen = {cif.instruction[31:12], 12'd0};
 
         end
         AUIPC : begin // make sure to add to write back block
-            cif.rsel1 = 0;
-            cif.alu_src = 1'b1;
-            cif.regwrite = 1'b1;
+            //cif.rsel1 = 0;
+            //cif.alu_src = 1'b1;
+            //cif.regwrite = 1'b1;
             cif.cauipc = 1'b1;
             cif.imm_gen = {cif.instruction[31:12], 12'd0};
 
