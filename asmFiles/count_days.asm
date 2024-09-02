@@ -1,7 +1,7 @@
 // assume x10 is current days, current month is x11, x12 is current year, and x15 is days
 count: 
     ori $sp, $0, 0xFFFC
-    li $10, 22
+    li $10, 16
     li $11, 8
     li $12, 2024
 
