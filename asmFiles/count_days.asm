@@ -30,6 +30,8 @@ count:
 
     add $15, $15, $10
 
+    push $15
+
     HALT // return the program 
 
 mult:

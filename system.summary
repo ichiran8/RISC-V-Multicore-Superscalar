@@ -1,4 +1,4 @@
-Fitter Status : Successful - Sun Sep  1 15:55:09 2024
+Fitter Status : Successful - Sun Sep  1 21:41:56 2024
 Quartus Prime Version : 21.1.1 Build 850 06/23/2022 SJ Standard Edition
 Revision Name : system
 Top-level Entity Name : system
@@ -14,7 +14,7 @@ Total virtual pins : 0
 Total memory bits : 524,288 / 3,981,312 ( 13 % )
 Embedded Multiplier 9-bit elements : 0 / 532 ( 0 % )
 Total PLLs : 0 / 4 ( 0 % )
-Analysis & Synthesis Status : Successful - Sun Sep  1 15:50:26 2024
+Analysis & Synthesis Status : Successful - Sun Sep  1 21:37:13 2024
 Quartus Prime Version : 21.1.1 Build 850 06/23/2022 SJ Standard Edition
 Revision Name : system
 Top-level Entity Name : system
