@@ -25,9 +25,9 @@ module alu_fpga (
   alu alu(aluif);
 
   always_ff @(posedge SW[17]) begin
-      aluif.rdb[15:0] <= SW[16:0];
+      aluif.rdb[16:0] <= SW[16:0];
   end
-assign aluif.rda[15:0] = SW[16:0];
+assign aluif.rda[16:0] = SW[16:0];
 assign LEDG[3:0] = ~KEY[3:0];
 //assign LEDR = aluif.result[17:0];
 
