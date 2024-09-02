@@ -38,16 +38,7 @@ module control_unit_tb;
     .\cif.rsel2(cif.rsel1),
     .\cif.wsel(cif.wsel),
     .\cif.instruction(cif.instruction),
-    .\cif.imm_i(cif.imm_i),
-    .\cif.imm_u_j(cif.imm_u_j),
-    .\cif.imm_s_b(cif.imm_s_b),
-    .\cif.funct3_r(cif.funct3_r),
-    .\cif.funct3_i(cif.funct3_i),
-    .\cif.funct3_s(cif.funct3_s),
-    .\cif.funct3_b(cif.funct3_s),
-    .\cif.funct7_r(cif.funct7_r),
-    .\cif.funct7_srla_r(cif.funct7_srla_r),
-    .\cif.opcode(cif.opcode),
+    .\cif.imm_gen(cif.imm_gen),
     .\cif.alu_op(cif.alu_op),
     .\cif.alu_src(cif.alu_src),
     .\cif.regwrite(cif.regwrite),
@@ -55,9 +46,8 @@ module control_unit_tb;
     .\cif.memread(cif.memread),
     .\cif.memreg(cif.memreg),
     .\cif.jump(cif.jump),
-    .\cif.rsel1(cif.rsel1),
-    .\cif.rsel2(cif.rsel2),
-    .\cif.wsel(cif.wsel)
+    .\cif.jalr(cif.jalr),
+    .\cif.lui(cif.lui),
     .\cif.cauipc(cif.cauipc)
   );
 `endif
