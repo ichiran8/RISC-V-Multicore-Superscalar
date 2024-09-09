@@ -20,15 +20,21 @@ interface control_unit_if;
 
   //logic branch_bit;
   aluop_t alu_op;
-  logic alu_src, regwrite, memwrite, memread, memreg, jump, cauipc, halt, jalr, lui;
+  logic alu_src, regwrite, memwrite, memread, memreg, jump, cauipc, halt, jalr, lui; //, zero;
   logic [1:0] branch_type;
 
 
   // register file ports
   modport cuif (
-    input   instruction,
+    input   instruction, //zero,
     output  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, cauipc, halt, jalr, branch_type, lui
   );
+
+   modport tb (
+    input  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, cauipc, halt, jalr, branch_type, lui,
+    output instruction //, zero
+  );
+
   // // register file tb
   // modport tb (
   //   input   rdat1, rdat2,

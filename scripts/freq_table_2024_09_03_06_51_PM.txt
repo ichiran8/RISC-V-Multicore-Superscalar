@@ -1,0 +1,5 @@
+Frequency Sweep Report File 2024_09_03_06_51_PM
+Frequency table for LAT = 0 85C Model
+Frequency table for LAT = 2 85C Model
+Frequency table for LAT = 6 85C Model
+Frequency table for LAT = 10 85C Model

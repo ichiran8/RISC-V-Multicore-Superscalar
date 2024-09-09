@@ -1,0 +1,134 @@
+make[1]: Entering directory `/home/ecegrid/a/mg236/ece437/processors'
+
+Hello mg236@ececomp4.ecn.purdue.edu, you forgot some targets.
+	If you need instructions to use this Makefile:
+		'make <module_name>' to build module
+		'make <module_name>_tb' to build module + testbench
+		'make <module_name>.sim' to sim tb on cmd line
+		'make <module_name>.wav' to sim tb with gui
+		'make <module_name>.syn' to synthesize functional net list
+		'make <module_name>.synt' to synthesize timing net list
+	Lint Rules:
+		'make <module_name>.lint' to run the linter on module
+		'make <module_name>_tb.lint' to run the linter on module testbench
+	Clean Rules:
+		'make clean' to clean everything
+		'make clean_sim' to clean simulation logs and work lib
+		'make clean_asm' to clean hex and testasm output
+		'make clean_map' to clean mapped dir
+		'make clean_fpga' to clean fpga dir
+	Obviously a testbench file must exist for some options.
+
+make[1]: Leaving directory `/home/ecegrid/a/mg236/ece437/processors'
+vlog  +acc -sv12compat -mfcu -lint +incdir+include -suppress 12110 -suppress 7061  testbench/system_tb.sv
+QuestaSim-64 vlog 2021.4 Compiler 2021.10 Oct 13 2021
+Start time: 00:45:25 on Sep 09,2024
+vlog "+acc" -sv12compat -mfcu -lint "+incdir+include" -suppress 12110 -suppress 7061 testbench/system_tb.sv 
+-- Compiling package cpu_types_pkg
+-- Compiling interface system_if
+-- Importing package cpu_types_pkg
+-- Compiling module system_tb
+-- Compiling program test
+
+Top level modules:
+	system_tb
+End time: 00:45:25 on Sep 09,2024, Elapsed time: 0:00:00
+Errors: 0, Warnings: 0
+Reading pref.tcl
+
+# 2021.4
+
+# ** Note: Multiple occurrences of ini variable ToggleWidthLimit are found, only first occurence will be considered.
+# ** Note: Multiple occurrences of ini variable ToggleWidthLimit are found, only first occurence will be considered.
+# ** Note: Multiple occurrences of ini variable ToggleWidthLimit are found, only first occurence will be considered.
+# ** Note: Multiple occurrences of ini variable ToggleWidthLimit are found, only first occurence will be considered.
+# ** Note: Multiple occurrences of ini variable ToggleWidthLimit are found, only first occurence will be considered.
+# ** Note: Multiple occurrences of ini variable ToggleWidthLimit are found, only first occurence will be considered.
+# vsim -coverage -suppress 12110 -suppress 7061 -c -do "run -all; exit;" -L altera_mf_ver -L altera_ver -L cycloneive_ver -wlf system_tb.wlf work.system_tb 
+# Start time: 00:45:26 on Sep 09,2024
+# ** Note: (vsim-3812) Design is being optimized...
+###### include/cache_control_if.vh(79):       iREN[1] = cif1.iREN;
+# ** Warning: include/cache_control_if.vh(79): (vopt-2576) [BSOB] - Bit-select into 'iREN' is out of bounds.
+###### include/cache_control_if.vh(80):       dREN[1] = cif1.dREN;
+# ** Warning: include/cache_control_if.vh(80): (vopt-2576) [BSOB] - Bit-select into 'dREN' is out of bounds.
+###### include/cache_control_if.vh(81):       dWEN[1] = cif1.dWEN;
+# ** Warning: include/cache_control_if.vh(81): (vopt-2576) [BSOB] - Bit-select into 'dWEN' is out of bounds.
+###### include/cache_control_if.vh(82):       dstore[1] = cif1.dstore;
+# ** Warning: include/cache_control_if.vh(82): (vopt-2696) Index 1 into array dimension 1 of 'dstore' is out of bounds.
+# ** Warning: include/cache_control_if.vh(82): (vopt-2696) Index 1 into array dimension 1 of 'dstore' is out of bounds.
+###### include/cache_control_if.vh(83):       iaddr[1] = cif1.iaddr;
+# ** Warning: include/cache_control_if.vh(83): (vopt-2696) Index 1 into array dimension 1 of 'iaddr' is out of bounds.
+# ** Warning: include/cache_control_if.vh(83): (vopt-2696) Index 1 into array dimension 1 of 'iaddr' is out of bounds.
+###### include/cache_control_if.vh(84):       daddr[1] = cif1.daddr;
+# ** Warning: include/cache_control_if.vh(84): (vopt-2696) Index 1 into array dimension 1 of 'daddr' is out of bounds.
+# ** Warning: include/cache_control_if.vh(84): (vopt-2696) Index 1 into array dimension 1 of 'daddr' is out of bounds.
+###### include/cache_control_if.vh(85):       ccwrite[1] = cif1.ccwrite;
+# ** Warning: include/cache_control_if.vh(85): (vopt-2576) [BSOB] - Bit-select into 'ccwrite' is out of bounds.
+###### include/cache_control_if.vh(86):       cctrans[1] = cif1.cctrans;
+# ** Warning: include/cache_control_if.vh(86): (vopt-2576) [BSOB] - Bit-select into 'cctrans' is out of bounds.
+###### include/cache_control_if.vh(95):       cif1.iwait = iwait[1];
+# ** Warning: include/cache_control_if.vh(95): (vopt-2576) [BSOB] - Bit-select into 'iwait' is out of bounds.
+###### include/cache_control_if.vh(96):       cif1.dwait = dwait[1];
+# ** Warning: include/cache_control_if.vh(96): (vopt-2576) [BSOB] - Bit-select into 'dwait' is out of bounds.
+###### include/cache_control_if.vh(97):       cif1.iload = iload[1];
+# ** Warning: include/cache_control_if.vh(97): (vopt-2696) Index 1 into array dimension 1 of 'iload' is out of bounds.
+###### include/cache_control_if.vh(98):       cif1.dload = dload[1];
+# ** Warning: include/cache_control_if.vh(98): (vopt-2696) Index 1 into array dimension 1 of 'dload' is out of bounds.
+###### include/cache_control_if.vh(99):       cif1.ccwait = ccwait[1];
+# ** Warning: include/cache_control_if.vh(99): (vopt-2576) [BSOB] - Bit-select into 'ccwait' is out of bounds.
+###### include/cache_control_if.vh(100):       cif1.ccinv = ccinv[1];
+# ** Warning: include/cache_control_if.vh(100): (vopt-2576) [BSOB] - Bit-select into 'ccinv' is out of bounds.
+###### include/cache_control_if.vh(101):       cif1.ccsnoopaddr = ccsnoopaddr[1];
+# ** Warning: include/cache_control_if.vh(101): (vopt-2696) Index 1 into array dimension 1 of 'ccsnoopaddr' is out of bounds.
+# ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=18.
+# //  Questa Sim-64
+# //  Version 2021.4 linux_x86_64 Oct 13 2021
+# //
+# //  Copyright 1991-2021 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# Loading sv_std.std
+# Loading work.system_tb(fast)
+# Loading work.cpu_types_pkg(fast)
+# Loading work.system_if(fast__1)
+# Loading work.test(fast)
+# Loading work.system(fast)
+# Loading work.cpu_ram_if(fast__1)
+# Loading work.singlecycle(fast)
+# Loading work.datapath_cache_if(fast__1)
+# Loading work.caches_if(fast__1)
+# Loading work.caches_if(fast__2)
+# Loading work.cache_control_if(fast__1)
+# Loading work.datapath(fast)
+# Loading work.register_file_if(fast__1)
+# Loading work.control_unit_if(fast__1)
+# Loading work.arithmetic_logic_if(fast__1)
+# Loading work.request_unit_if(fast__1)
+# Loading work.register_file_sv_unit(fast)
+# Loading work.register_file(fast)
+# Loading work.alu_sv_unit(fast)
+# Loading work.alu(fast)
+# Loading work.control_unit_sv_unit(fast)
+# Loading work.control_unit(fast)
+# Loading work.request_unit_sv_unit(fast)
+# Loading work.request_unit(fast)
+# Loading work.caches(fast)
+# Loading work.memory_control(fast)
+# Loading work.ram(fast)
+# Loading altera_mf_ver.altsyncram(fast)
+# run -all
+# Starting Processor.
+# Break key hit
+# Break in Module caches at source/caches.sv line 64
+# Stopped at source/caches.sv line 64
+#  exit
+# End time: 00:46:55 on Sep 09,2024, Elapsed time: 0:01:29
+# Errors: 0, Warnings: 18, Suppressed Errors: 1

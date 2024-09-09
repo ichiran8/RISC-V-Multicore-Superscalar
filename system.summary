@@ -1,28 +1,28 @@
-Fitter Status : Successful - Sun Sep  1 21:41:56 2024
+Fitter Status : Successful - Mon Sep  9 01:01:09 2024
 Quartus Prime Version : 21.1.1 Build 850 06/23/2022 SJ Standard Edition
 Revision Name : system
 Top-level Entity Name : system
 Family : Cyclone IV E
 Device : EP4CE115F29C8
 Timing Models : Final
-Total logic elements : 3,124 / 114,480 ( 3 % )
-    Total combinational functions : 2,962 / 114,480 ( 3 % )
-    Dedicated logic registers : 1,289 / 114,480 ( 1 % )
-Total registers : 1290
+Total logic elements : 3,152 / 114,480 ( 3 % )
+    Total combinational functions : 2,928 / 114,480 ( 3 % )
+    Dedicated logic registers : 1,288 / 114,480 ( 1 % )
+Total registers : 1289
 Total pins : 102 / 529 ( 19 % )
 Total virtual pins : 0
 Total memory bits : 524,288 / 3,981,312 ( 13 % )
 Embedded Multiplier 9-bit elements : 0 / 532 ( 0 % )
 Total PLLs : 0 / 4 ( 0 % )
-Analysis & Synthesis Status : Successful - Sun Sep  1 21:37:13 2024
+Analysis & Synthesis Status : Successful - Mon Sep  9 00:55:51 2024
 Quartus Prime Version : 21.1.1 Build 850 06/23/2022 SJ Standard Edition
 Revision Name : system
 Top-level Entity Name : system
 Family : Cyclone IV E
-Total logic elements : 3,955
-    Total combinational functions : 2,961
-    Dedicated logic registers : 1,289
-Total registers : 1289
+Total logic elements : 3,921
+    Total combinational functions : 2,928
+    Dedicated logic registers : 1,288
+Total registers : 1288
 Total pins : 102
 Total virtual pins : 0
 Total memory bits : 524,288
@@ -33,64 +33,64 @@ Timing Analyzer Summary
 ------------------------------------------------------------
 
 Type  : Slow 1200mV 85C Model Setup 'CPUCLK'
-Slack : -11.493
-TNS   : -10564.634
+Slack : -22.342
+TNS   : -21701.443
 
 Type  : Slow 1200mV 85C Model Setup 'CLK'
-Slack : -8.932
-TNS   : -802.089
+Slack : -16.279
+TNS   : -2551.304
 
 Type  : Slow 1200mV 85C Model Setup 'altera_reserved_tck'
-Slack : 44.332
+Slack : 44.230
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Hold 'CPUCLK'
-Slack : -0.285
-TNS   : -0.604
+Slack : -0.066
+TNS   : -0.066
 
 Type  : Slow 1200mV 85C Model Hold 'CLK'
 Slack : 0.442
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Hold 'altera_reserved_tck'
-Slack : 0.443
+Slack : 0.444
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Recovery 'altera_reserved_tck'
-Slack : 96.978
+Slack : 96.910
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Removal 'altera_reserved_tck'
-Slack : 1.532
+Slack : 1.619
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Minimum Pulse Width 'CLK'
-Slack : 4.696
-TNS   : 0.000
+Slack : -1.701
+TNS   : -328.092
 
 Type  : Slow 1200mV 85C Model Minimum Pulse Width 'CPUCLK'
-Slack : 9.740
+Slack : 2.236
 TNS   : 0.000
 
 Type  : Slow 1200mV 85C Model Minimum Pulse Width 'altera_reserved_tck'
-Slack : 49.489
+Slack : 49.499
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Setup 'CPUCLK'
-Slack : -10.472
-TNS   : -9548.233
+Slack : -20.727
+TNS   : -20215.304
 
 Type  : Slow 1200mV 0C Model Setup 'CLK'
-Slack : -7.741
-TNS   : -632.102
+Slack : -15.209
+TNS   : -2361.214
 
 Type  : Slow 1200mV 0C Model Setup 'altera_reserved_tck'
-Slack : 44.731
+Slack : 44.568
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Hold 'CPUCLK'
-Slack : -0.262
-TNS   : -0.575
+Slack : -0.062
+TNS   : -0.062
 
 Type  : Slow 1200mV 0C Model Hold 'CLK'
 Slack : 0.392
@@ -101,40 +101,40 @@ Slack : 0.394
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Recovery 'altera_reserved_tck'
-Slack : 97.165
+Slack : 97.098
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Removal 'altera_reserved_tck'
-Slack : 1.380
+Slack : 1.462
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Minimum Pulse Width 'CLK'
-Slack : 4.679
-TNS   : 0.000
+Slack : -1.701
+TNS   : -328.092
 
 Type  : Slow 1200mV 0C Model Minimum Pulse Width 'CPUCLK'
-Slack : 9.728
+Slack : 2.226
 TNS   : 0.000
 
 Type  : Slow 1200mV 0C Model Minimum Pulse Width 'altera_reserved_tck'
-Slack : 49.343
+Slack : 49.354
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Setup 'CPUCLK'
-Slack : 0.786
-TNS   : 0.000
+Slack : -7.152
+TNS   : -6741.676
 
 Type  : Fast 1200mV 0C Model Setup 'CLK'
-Slack : 1.541
-TNS   : 0.000
+Slack : -5.897
+TNS   : -851.804
 
 Type  : Fast 1200mV 0C Model Setup 'altera_reserved_tck'
-Slack : 47.651
+Slack : 47.591
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Hold 'CPUCLK'
-Slack : -0.311
-TNS   : -1.212
+Slack : -0.216
+TNS   : -0.654
 
 Type  : Fast 1200mV 0C Model Hold 'CLK'
 Slack : 0.181
@@ -145,23 +145,23 @@ Slack : 0.181
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Recovery 'altera_reserved_tck'
-Slack : 98.673
+Slack : 98.637
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Removal 'altera_reserved_tck'
-Slack : 0.640
+Slack : 0.684
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Minimum Pulse Width 'CLK'
-Slack : 4.372
-TNS   : 0.000
+Slack : -1.500
+TNS   : -1.500
 
 Type  : Fast 1200mV 0C Model Minimum Pulse Width 'CPUCLK'
-Slack : 9.772
+Slack : 2.276
 TNS   : 0.000
 
 Type  : Fast 1200mV 0C Model Minimum Pulse Width 'altera_reserved_tck'
-Slack : 49.456
+Slack : 49.454
 TNS   : 0.000
 
 ------------------------------------------------------------

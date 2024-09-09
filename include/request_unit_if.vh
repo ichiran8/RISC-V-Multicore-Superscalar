@@ -31,6 +31,12 @@ interface request_unit_if;
     input   ihit, dhit, memread, memwrite,
     output  imemREN, dmemREN, dmemWEN, pc_enable
   );
+
+    modport tb (
+    input  imemREN, dmemREN, dmemWEN, pc_enable,
+
+    output   ihit, dhit, memread, memwrite
+  );
 //   // register file tb
 //   modport tb (
 //     input   rdat1, rdat2,
