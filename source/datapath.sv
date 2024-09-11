@@ -60,13 +60,13 @@ end
 always_comb begin
   next_pc = pc;
   if(ru.pc_enable) begin
-    next_pc = pc + 4;//pc_add;
-    unique casez({cif.jump, cif.jalr, cif.branch_type})      
+    //next_pc = pc + 4;//pc_add;
+    casez({cif.jump, cif.jalr, cif.branch_type})      
         4'b1000 : next_pc = pc + cif.imm_gen;
         4'b0100 : next_pc = aluif.result;
         4'b0010 : next_pc = !(aluif.zero) ? pc + cif.imm_gen : pc + 4;
         4'b0001 : next_pc = (aluif.zero) ? pc + cif.imm_gen : pc + 4;
-        //default : next_pc = pc + 4;
+        default : next_pc = pc + 4;
       endcase
     end
 end
@@ -97,12 +97,13 @@ assign rfif.wsel = cif.wsel;
 logic switch1;
 assign switch1 = cif.jump | cif.jalr;
 always_comb begin
-  rfif.wdat = dpif.dmemload;
+  //rfif.wdat = dpif.dmemload;
   casez({cif.memreg, switch1, cif.cauipc, cif.lui})
     4'b0000 : rfif.wdat = aluif.result;
     4'b0100 : rfif.wdat = pc + 4;
     4'b0010 : rfif.wdat = pc + cif.imm_gen;
     4'b0001 : rfif.wdat = cif.imm_gen;
+    default : rfif.wdat = dpif.dmemload;
   endcase
 end
 //assign rfif.wdat = (cif.memreg) ? dpif.dmemload : (cif.jump | cif.jalr) ? pc + 4: (cif.cauipc) ? pc + cif.imm_gen : (cif.lui) ? cif.imm_gen : aluif.result;
