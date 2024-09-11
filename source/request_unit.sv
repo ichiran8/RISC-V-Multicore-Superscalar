@@ -7,11 +7,11 @@ module request_unit(
 
     always_ff @(posedge CLK, negedge nRST) begin
         if(!nRST) begin
-            ruif.dmemREN <= 1'b0;
-            ruif.dmemWEN <= 1'b0;
+            ruif.dmemREN <= '0;
+            ruif.dmemWEN <= '0;
         end else begin
-            ruif.dmemREN <= (ruif.dhit) ? 1'b0 : (ruif.ihit) ? ruif.memread : ruif.dmemREN;
-            ruif.dmemWEN <= (ruif.dhit) ? 1'b0 : (ruif.ihit) ? ruif.memwrite : ruif.dmemWEN;
+            ruif.dmemREN <= (ruif.dhit) ? 1'b0 : (ruif.ihit & ruif.memread) ? 1'b1 : ruif.dmemREN;
+            ruif.dmemWEN <= (ruif.dhit) ? 1'b0 : (ruif.ihit & ruif.memwrite) ? 1'b1 : ruif.dmemWEN;
         end
     end
     assign ruif.pc_enable = ruif.ihit;

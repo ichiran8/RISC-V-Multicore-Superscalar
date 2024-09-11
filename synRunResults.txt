@@ -1,6 +1,6 @@
 make[1]: Entering directory `/home/ecegrid/a/mg236/ece437/processors'
 
-Hello mg236@ececomp4.ecn.purdue.edu, you forgot some targets.
+Hello mg236@ececomp3.ecn.purdue.edu, you forgot some targets.
 	If you need instructions to use this Makefile:
 		'make <module_name>' to build module
 		'make <module_name>_tb' to build module + testbench
@@ -22,7 +22,7 @@ Hello mg236@ececomp4.ecn.purdue.edu, you forgot some targets.
 make[1]: Leaving directory `/home/ecegrid/a/mg236/ece437/processors'
 vlog  +acc -sv12compat -mfcu -lint +incdir+include -suppress 12110 -suppress 7061  testbench/system_tb.sv
 QuestaSim-64 vlog 2021.4 Compiler 2021.10 Oct 13 2021
-Start time: 00:45:25 on Sep 09,2024
+Start time: 23:52:21 on Sep 10,2024
 vlog "+acc" -sv12compat -mfcu -lint "+incdir+include" -suppress 12110 -suppress 7061 testbench/system_tb.sv 
 -- Compiling package cpu_types_pkg
 -- Compiling interface system_if
@@ -32,7 +32,7 @@ vlog "+acc" -sv12compat -mfcu -lint "+incdir+include" -suppress 12110 -suppress 
 
 Top level modules:
 	system_tb
-End time: 00:45:25 on Sep 09,2024, Elapsed time: 0:00:00
+End time: 23:52:21 on Sep 10,2024, Elapsed time: 0:00:00
 Errors: 0, Warnings: 0
 Reading pref.tcl
 
@@ -45,7 +45,7 @@ Reading pref.tcl
 # ** Note: Multiple occurrences of ini variable ToggleWidthLimit are found, only first occurence will be considered.
 # ** Note: Multiple occurrences of ini variable ToggleWidthLimit are found, only first occurence will be considered.
 # vsim -coverage -suppress 12110 -suppress 7061 -c -do "run -all; exit;" -L altera_mf_ver -L altera_ver -L cycloneive_ver -wlf system_tb.wlf work.system_tb 
-# Start time: 00:45:26 on Sep 09,2024
+# Start time: 23:52:21 on Sep 10,2024
 # ** Note: (vsim-3812) Design is being optimized...
 ###### include/cache_control_if.vh(79):       iREN[1] = cif1.iREN;
 # ** Warning: include/cache_control_if.vh(79): (vopt-2576) [BSOB] - Bit-select into 'iREN' is out of bounds.
@@ -126,9 +126,8 @@ Reading pref.tcl
 # Loading altera_mf_ver.altsyncram(fast)
 # run -all
 # Starting Processor.
-# Break key hit
-# Break in Module caches at source/caches.sv line 64
-# Stopped at source/caches.sv line 64
-#  exit
-# End time: 00:46:55 on Sep 09,2024, Elapsed time: 0:01:29
+# Halted at 1.65772e+06 time and ran for      82885 cycles.
+# Starting memory dump.
+# Finished memory dump.
+# End time: 23:52:23 on Sep 10,2024, Elapsed time: 0:00:02
 # Errors: 0, Warnings: 18, Suppressed Errors: 1

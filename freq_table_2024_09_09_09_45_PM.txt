@@ -1,37 +1,37 @@
-Frequency Sweep Report File 2024_09_08_11_40_AM
+Frequency Sweep Report File 2024_09_09_09_45_PM
 Frequency table for LAT = 0 85C Model
 +-----------+-----------------+---------------------+------+
 ; Fmax      ; Restricted Fmax ; Clock Name          ; Note ;
 +-----------+-----------------+---------------------+------+
-; 36.79 MHz ; 36.79 MHz       ; CPUCLK              ;      ;
-; 73.88 MHz ; 73.88 MHz       ; CLK                 ;      ;
-; 74.38 MHz ; 74.38 MHz       ; altera_reserved_tck ;      ;
+; 36.57 MHz ; 36.57 MHz       ; CPUCLK              ;      ;
+; 71.93 MHz ; 71.93 MHz       ; CLK                 ;      ;
+; 86.66 MHz ; 86.66 MHz       ; altera_reserved_tck ;      ;
 +-----------+-----------------+---------------------+------+
 # Halted at 276280 time and ran for      13813 cycles.
 Frequency table for LAT = 2 85C Model
 +-----------+-----------------+---------------------+------+
 ; Fmax      ; Restricted Fmax ; Clock Name          ; Note ;
 +-----------+-----------------+---------------------+------+
-; 38.48 MHz ; 38.48 MHz       ; CPUCLK              ;      ;
-; 71.06 MHz ; 71.06 MHz       ; CLK                 ;      ;
-; 92.64 MHz ; 92.64 MHz       ; altera_reserved_tck ;      ;
+; 37.58 MHz ; 37.58 MHz       ; CPUCLK              ;      ;
+; 70.52 MHz ; 70.52 MHz       ; CLK                 ;      ;
+; 90.84 MHz ; 90.84 MHz       ; altera_reserved_tck ;      ;
 +-----------+-----------------+---------------------+------+
 # Halted at 552600 time and ran for      27629 cycles.
 Frequency table for LAT = 6 85C Model
 +-----------+-----------------+---------------------+------+
 ; Fmax      ; Restricted Fmax ; Clock Name          ; Note ;
 +-----------+-----------------+---------------------+------+
-; 39.08 MHz ; 39.08 MHz       ; CPUCLK              ;      ;
-; 72.99 MHz ; 72.99 MHz       ; CLK                 ;      ;
-; 81.49 MHz ; 81.49 MHz       ; altera_reserved_tck ;      ;
+; 37.32 MHz ; 37.32 MHz       ; CPUCLK              ;      ;
+; 71.55 MHz ; 71.55 MHz       ; CLK                 ;      ;
+; 76.37 MHz ; 76.37 MHz       ; altera_reserved_tck ;      ;
 +-----------+-----------------+---------------------+------+
 # Halted at 1.10516e+06 time and ran for      55257 cycles.
 Frequency table for LAT = 10 85C Model
 +-----------+-----------------+---------------------+------+
 ; Fmax      ; Restricted Fmax ; Clock Name          ; Note ;
 +-----------+-----------------+---------------------+------+
-; 37.71 MHz ; 37.71 MHz       ; CPUCLK              ;      ;
-; 60.85 MHz ; 60.85 MHz       ; altera_reserved_tck ;      ;
-; 72.31 MHz ; 72.31 MHz       ; CLK                 ;      ;
+; 38.13 MHz ; 38.13 MHz       ; CPUCLK              ;      ;
+; 74.51 MHz ; 74.51 MHz       ; CLK                 ;      ;
+; 100.7 MHz ; 100.7 MHz       ; altera_reserved_tck ;      ;
 +-----------+-----------------+---------------------+------+
 # Halted at 1.65772e+06 time and ran for      82885 cycles.
