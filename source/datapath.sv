@@ -55,7 +55,25 @@ always_ff @(posedge CLK, negedge nRST) begin
   end
 end
 
+assign dpif.dmemstore = ru.dmemstore; 
+assign ru.rdat2 = rfif.rdat2;
 //assign pc_add = pc + 4;
+
+//logic branch_det;
+//assign branch_det = (aluif.zero & cif.branch_type[0]) | (!aluif.zero & cif.branch_type[1]);
+
+// always_comb begin
+//   next_pc = pc;
+//   if(ru.pc_enable) begin
+//     //next_pc = pc + 4;
+//     casez({cif.jalr, cif.jump, branch_det})
+//       3'b100 : next_pc = aluif.result;
+//       3'b010 : next_pc = pc + cif.imm_gen;
+//       3'b001 : next_pc = pc + cif.imm_gen;
+//       default: next_pc = pc + 4;
+//     endcase
+//   end
+// end
 
 always_comb begin
   next_pc = pc;
@@ -77,7 +95,7 @@ assign dpif.imemREN = ru.imemREN;
 assign dpif.dmemREN = ru.dmemREN;
 assign dpif.dmemWEN = ru.dmemWEN;
 assign dpif.imemaddr = pc;
-assign dpif.dmemstore = rfif.rdat2;
+//assign dpif.dmemstore = rfif.rdat2;
 assign dpif.dmemaddr = aluif.result;
 
 

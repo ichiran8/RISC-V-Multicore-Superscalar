@@ -9,9 +9,11 @@ module request_unit(
         if(!nRST) begin
             ruif.dmemREN <= '0;
             ruif.dmemWEN <= '0;
+            ruif.dmemstore <= '0;
         end else begin
-            ruif.dmemREN <= (ruif.dhit) ? 1'b0 : (ruif.ihit & ruif.memread) ? 1'b1 : ruif.dmemREN;
-            ruif.dmemWEN <= (ruif.dhit) ? 1'b0 : (ruif.ihit & ruif.memwrite) ? 1'b1 : ruif.dmemWEN;
+            ruif.dmemREN <= (ruif.dhit) ? 1'b0 : (ruif.ihit) ? ruif.memread : ruif.dmemREN;
+            ruif.dmemWEN <= (ruif.dhit) ? 1'b0 : (ruif.ihit) ? ruif.memwrite : ruif.dmemWEN;
+            ruif.dmemstore <= (ruif.dhit) ? '0 : (ruif.ihit & ruif.memwrite) ? ruif.rdat2 : ruif.dmemstore;
         end
     end
     assign ruif.pc_enable = ruif.ihit;

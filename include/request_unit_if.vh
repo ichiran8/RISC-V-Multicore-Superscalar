@@ -22,20 +22,21 @@ interface request_unit_if;
 // Icache signals
   // hit and enable
   logic               ihit, imemREN, dhit, dmemREN, dmemWEN, memread, memwrite, pc_enable;
+  word_t dmemstore, rdat2;
 
 
 
 
  // datapath ports
   modport ru (
-    input   ihit, dhit, memread, memwrite,
-    output  imemREN, dmemREN, dmemWEN, pc_enable
+    input   ihit, dhit, memread, memwrite, rdat2,
+    output  imemREN, dmemREN, dmemWEN, pc_enable, dmemstore
   );
 
     modport tb (
-    input  imemREN, dmemREN, dmemWEN, pc_enable,
+    input  imemREN, dmemREN, dmemWEN, pc_enable, dmemstore,
 
-    output   ihit, dhit, memread, memwrite
+    output   ihit, dhit, memread, memwrite, rdat2
   );
 //   // register file tb
 //   modport tb (
