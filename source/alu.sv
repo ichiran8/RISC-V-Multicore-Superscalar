@@ -34,17 +34,4 @@ end
 assign aluif.zero = (aluif.result == 0);
 assign aluif.negative = aluif.result[31];
 
-
-// always_comb begin
-//     aluif.overflow = 1'b0;
-//     if(aluif.alu_op == ALU_ADD) begin
-//         if((aluif.rda[31] && aluif.rdb[31] && !aluif.result[31]) || (!aluif.rda[31] && !aluif.rdb[31] && aluif.result[31])) begin
-//             aluif.overflow = 1'b1;
-//         end
-//     end else if (aluif.alu_op == ALU_SUB) begin
-//         if((aluif.rda[31] && !aluif.rdb[31] && !aluif.result[31]) || (!aluif.rda[31] && aluif.rdb[31] && aluif.result[31])) begin
-//             aluif.overflow = 1'b1; 
-//         end
-//     end
-// end
 endmodule

@@ -1,11 +1,3 @@
-/*
-  Eric Villasenor
-  evillase@gmail.com
-
-  datapath contains register file, control, hazard,
-  muxes, and glue logic for processor
-*/
-
 // data path interface
 `include "datapath_cache_if.vh"
 
@@ -33,13 +25,7 @@ module datapath (
   register_file_if rfif ();
   control_unit_if cif ();
   arithmetic_logic_if aluif ();
-  //program_counter_if prog ();
   request_unit_if ru();
-//  alusrc_if src ();
-  //writeback_if wbif();
-  //branch_mux_if bif();
-//assign dpif.flushed = 1'b1;
-// assigning ports
 
 word_t portB;
 
@@ -57,23 +43,6 @@ end
 
 assign dpif.dmemstore = ru.dmemstore; 
 assign ru.rdat2 = rfif.rdat2;
-//assign pc_add = pc + 4;
-
-//logic branch_det;
-//assign branch_det = (aluif.zero & cif.branch_type[0]) | (!aluif.zero & cif.branch_type[1]);
-
-// always_comb begin
-//   next_pc = pc;
-//   if(ru.pc_enable) begin
-//     //next_pc = pc + 4;
-//     casez({cif.jalr, cif.jump, branch_det})
-//       3'b100 : next_pc = aluif.result;
-//       3'b010 : next_pc = pc + cif.imm_gen;
-//       3'b001 : next_pc = pc + cif.imm_gen;
-//       default: next_pc = pc + 4;
-//     endcase
-//   end
-// end
 
 always_comb begin
   next_pc = pc;
@@ -95,9 +64,7 @@ assign dpif.imemREN = ru.imemREN;
 assign dpif.dmemREN = ru.dmemREN;
 assign dpif.dmemWEN = ru.dmemWEN;
 assign dpif.imemaddr = pc;
-//assign dpif.dmemstore = rfif.rdat2;
 assign dpif.dmemaddr = aluif.result;
-
 
 
 assign cif.instruction = dpif.imemload;
@@ -115,7 +82,6 @@ assign rfif.wsel = cif.wsel;
 logic switch1;
 assign switch1 = cif.jump | cif.jalr;
 always_comb begin
-  //rfif.wdat = dpif.dmemload;
   casez({cif.memreg, switch1, cif.cauipc, cif.lui})
     4'b0000 : rfif.wdat = aluif.result;
     4'b0100 : rfif.wdat = pc + 4;
@@ -124,17 +90,11 @@ always_comb begin
     default : rfif.wdat = dpif.dmemload;
   endcase
 end
-//assign rfif.wdat = (cif.memreg) ? dpif.dmemload : (cif.jump | cif.jalr) ? pc + 4: (cif.cauipc) ? pc + cif.imm_gen : (cif.lui) ? cif.imm_gen : aluif.result;
 assign rfif.WEN = cif.regwrite & (dpif.dhit | dpif.ihit);
 
 assign aluif.rda = rfif.rdat1;
 assign aluif.rdb = portB;
 assign aluif.alu_op = cif.alu_op;
-
-
-
-//assign bif.branch_bit = cif.branch_bit;
-
 
 
 always_ff @(posedge CLK, negedge nRST) begin
@@ -149,9 +109,6 @@ end
   register_file rf(CLK, nRST, rfif);
   alu alu(aluif);
   control_unit cu1(cif);
-  //pc pc(CLK, nRST, prog);
   request_unit ru1(CLK, nRST, ru);
-  //writeback wb(wbif);
-  //branch_mux bm(bif);
 
 endmodule

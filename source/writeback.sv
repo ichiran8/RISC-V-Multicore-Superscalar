@@ -6,7 +6,6 @@ module writeback(
     writeback_if.wb wbif
 );
 
-
 always_comb begin
     wbif.wdat = wbif.result;
     if(wbif.jump | wbif.jalr) begin
