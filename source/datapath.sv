@@ -19,6 +19,25 @@ module datapath (
   // import types
   import cpu_types_pkg::*;
 
+  // INSTRUCTION FETCH : INSTRUCTION DECODE (IF/ID) LATCH
+  typedef struct packed {
+    logic [31:0] next_pc;
+    word_t instruction;
+  } if_id_t;
+
+  if_id_t if_id;
+
+  always_ff @(posedge CLK, negedge nRST) begin : IF_ID_LATCH
+    if(!nRST) begin // add flush here
+      if_id.next_pc <= '0;
+      if_id.instruction <= '0;
+    end
+    else begin
+      if_id.next_pc <= cif.next_pc;
+      if_id.instruction <= cif.instruction;
+    end
+  end
+ 
   // pc init
  parameter PC_INIT = 0;
 
