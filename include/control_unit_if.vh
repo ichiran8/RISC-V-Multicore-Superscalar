@@ -13,6 +13,13 @@
 interface control_unit_if;
   // import types
   import cpu_types_pkg::*;
+  
+  funct3_r_t funct3_r;
+  funct3_b_t funct3_b;
+  funct3_i_t funct3_i;
+  funct7_r_t funct7_r;
+  funct7_srla_r_t funct7_srla_r;
+  opcode_t opcode;
 
   word_t instruction, imm_gen;
   regbits_t wsel, rsel1, rsel2;
@@ -26,7 +33,7 @@ interface control_unit_if;
 
   // register file ports
   modport cuif (
-    input   instruction, //zero,
+    input   instruction, funct3_r, funct3_b, funct3_i, funct7_r, funct7_srla_r, //zero,
     output  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, cauipc, halt, jalr, branch_type, lui
   );
 

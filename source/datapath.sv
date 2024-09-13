@@ -18,10 +18,19 @@ module datapath (
 );
   // import types
   import cpu_types_pkg::*;
+  // pc init
+  parameter PC_INIT = 0;
 
-  // INSTRUCTION FETCH : INSTRUCTION DECODE (IF/ID) LATCH
+  register_file_if rfif ();
+  control_unit_if cif ();
+  arithmetic_logic_if aluif ();
+  request_unit_if ru();
+
+  // START OF INSTRUCTION FETCH : INSTRUCTION DECODE (IF/ID) LATCH
+
+  //
   typedef struct packed {
-    logic [31:0] next_pc;
+    word_t next_pc;
     word_t instruction;
   } if_id_t;
 
@@ -29,28 +38,61 @@ module datapath (
 
   always_ff @(posedge CLK, negedge nRST) begin : IF_ID_LATCH
     if(!nRST) begin // add flush here
-      if_id.next_pc <= '0;
-      if_id.instruction <= '0;
-    end
-    else begin
-      if_id.next_pc <= cif.next_pc;
-      if_id.instruction <= cif.instruction;
+      if_id <= '0;
+    end else (dpif.ihit) begin
+      if_id.instruction <= dpif.imemload;
+      if_id.next_pc <= pc + 4;
     end
   end
- 
-  // pc init
- parameter PC_INIT = 0;
+assign cif.instruction = if_id.instruction;
+assign next_pc = if_id.next_pc;
 
-  register_file_if rfif ();
-  control_unit_if cif ();
-  arithmetic_logic_if aluif ();
-  request_unit_if ru();
+// END OF INSTRUCTION FETCH : INSTRUCTION DECODE (IF/ID) LATCH
+
+//
+
+// START OF INSTRUCTION DECODE : EXECUTE (ID/EX) LATCH
+
+//
+  typedef struct packed {
+    word_t rdat1, rdat2;
+    logic alu_src, regwrite, memwrite, memread, memreg, jump, auipc, halt, jalr, lui; 
+  } id_ex_t;
+
+  if_ex_t id_ex;
+
+  always_ff begin
+    if(!nRST) begin
+      id_ex <= '0;
+    end else begin
+      id_ex.rdat1 <= rfif.rdat1;
+      id_ex.rdat2 <= rif.rdat2;
+      id_ex.imm_gen <= cif.imm_gen; // NOT A CONTROL SIGNAL
+      id_ex.alu_src <= cif.alu_src; // choosing whether or not we take a value to r2 or immediate
+      id_ex.regwrite <= cif.regwrite; // determine whether or not we write into a register
+      id_ex.memwrite <= cif.memwrit3e; // determine whether or not we write into memory
+      id_ex.memread <= cif.memread; // determine whether or not we are reading from memory
+      id_ex.memreg <= cif.memreg; // determine whether or not we take the value from memory or the alu result to be written back 
+      id_ex.alu_op <= cif.alu_op; // alu operation ; NOT A CONTROL SIGNAL (BASICALLY)
+      id_ex.jump <= cif.jump; // jump for JAL and JALR (write back block); I think AUIPC too?
+      id_ex.auipc <= cif.cauipc; //auipc ctrl logic
+      id_ex.halt <= cif.halt;
+      id_ex.jalr <= cif.jalr;
+      id_ex.branch_type <= cif.branch_type;
+      id_ex.lui <= cif.lui;
+    end
+  end
+
+  // END OF INSTRUCTION DECODE : EXECUTE (ID/EX) LATCH
+
+  //
+ 
 
 word_t portB;
 
 assign portB = (cif.alu_src) ? cif.imm_gen : rfif.rdat2;
 
-word_t next_pc, pc;//, pc_add;
+word_t next_pc, pc; //, pc_add;
 
 always_ff @(posedge CLK, negedge nRST) begin
   if(!nRST) begin
