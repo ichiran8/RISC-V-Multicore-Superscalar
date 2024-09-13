@@ -64,7 +64,7 @@ assign next_pc = if_id.next_pc;
   always_ff begin
     if(!nRST) begin
       id_ex <= '0;
-    end else begin
+    end else if (dpif.ihit) begin
       id_ex.rdat1 <= rfif.rdat1;
       id_ex.rdat2 <= rif.rdat2;
       id_ex.imm_gen <= cif.imm_gen; // NOT A CONTROL SIGNAL
