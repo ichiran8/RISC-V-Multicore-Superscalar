@@ -6,7 +6,7 @@ module register_file(input logic CLK, nRST, register_file_if.rf rfif);
 
 word_t [31:0] registers;
 
-always_ff @(posedge CLK, negedge nRST) begin
+always_ff @(negedge CLK, negedge nRST) begin
     if(!nRST) begin
         registers <= '0;
     end else if (rfif.WEN && !(rfif.wsel == 5'b0)) begin

@@ -24,7 +24,7 @@ module datapath (
   register_file_if rfif ();
   control_unit_if cif ();
   arithmetic_logic_if aluif ();
-  request_unit_if ru();
+  //request_unit_if ru();
 
 word_t next_pc, pc, portB;
 logic switch1;
@@ -36,15 +36,10 @@ register_file rf(CLK, nRST, rfif);
 alu alu(aluif);
 control_unit cu1(cif);
 request_unit ru1(CLK, nRST, ru);
-assign dpif.imemREN = ru.imemREN;
-assign dpif.dmemREN = ru.dmemREN;
-assign dpif.dmemWEN = ru.dmemWEN;
+assign dpif.imemREN = 1'b1;
 assign dpif.imemaddr = pc;
-assign ru.ihit = dpif.ihit;
-assign ru.dhit = dpif.dhit;
 assign rfif.rsel1 = cif.rsel1;
 assign rfif.rsel2 = cif.rsel2;
-assign dpif.dmemstore = ru.dmemstore; 
 
 //********************** PROGRAM COUNTER ************************** //
 
@@ -69,7 +64,7 @@ end
   always_ff @(posedge CLK, negedge nRST) begin : IF_ID_LATCH
     if(!nRST) begin // add flush here
       if_id <= '0;
-    end else (dpif.ihit) begin
+    end else if (dpif.ihit) begin
       if_id.instruction <= dpif.imemload;
       if_id.pc_add <= pc + 4;
     end
@@ -142,7 +137,7 @@ assign aluif.alu_op = id_ex.alu_op;
       mem_ex.pc_add <= id_ex.pc_add;
       mem_ex.imm_gen <= id_ex.imm_gen; // NOT A CONTROL SIGNAL
       mem_ex.regwrite <= id_ex.regwrite; // determine whether or not we write into a register
-      mem_ex.memwrite <= id_ex.memwrit3e; // determine whether or not we write into memory
+      mem_ex.memwrite <= id_ex.memwrite; // determine whether or not we write into memory
       mem_ex.memread <= id_ex.memread; // determine whether or not we are reading from memory
       mem_ex.memreg <= id_ex.memreg; // determine whether or not we take the value from memory or the alu result to be written back 
       mem_ex.jump <= id_ex.jump; // jump for JAL and JALR (write back block); I think AUIPC too?
@@ -156,10 +151,11 @@ assign aluif.alu_op = id_ex.alu_op;
     end
   end
  
-assign ru.rdat2 = mem_ex.rdat2; //
+assign dpif.dmemstore = mem_ex.rdat2; 
 assign dpif.dmemaddr = mem_ex.result;
-assign ru.memread = mem_ex.memread;
-assign ru.memwrite = mem_ex.memwrite;
+assign dpif.dmemREN = (dpif.dhit) ? 1'b0 : mem_ex.memread;
+assign dpif.dmemWEN = (dpif.dhit) ? 1'b0 : mem_ex.memwrite;
+
 
 
 always_comb begin
@@ -192,9 +188,11 @@ end
   such as Branch.
 
   I need someone to double check whether or not the number of latched bits in the fourth stage is correct; I cannot seem to drop any bits more than 2?
+ 
+ ALSO! Request unit is o longer needed!
 */
-
-assign rfif.wsel = cif.wsel;
+ 
+assign rfif.wsel = cif.wsel; // this is not going to be the control unit wsel! It will come from the latch!
 
 
 
