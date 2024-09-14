@@ -35,7 +35,7 @@ logic switch1;
 register_file rf(CLK, nRST, rfif);
 alu alu(aluif);
 control_unit cu1(cif);
-request_unit ru1(CLK, nRST, ru);
+// request_unit ru1(CLK, nRST, ru);
 assign dpif.imemREN = 1'b1;
 assign dpif.imemaddr = pc;
 assign rfif.rsel1 = cif.rsel1;
@@ -83,19 +83,19 @@ assign cif.instruction = if_id.instruction;
     logic [1:0] branch_type;
   } id_ex_t;
 
-  if_ex_t id_ex;
+  id_ex_t id_ex;
 
   always_ff @(posedge CLK, negedge nRST) begin : ID_EX_LATCH
     if(!nRST) begin
       id_ex <= '0;
     end else if (dpif.ihit) begin
       id_ex.rdat1 <= rfif.rdat1;
-      id_ex.rdat2 <= rif.rdat2;
+      id_ex.rdat2 <= rfif.rdat2;
       id_ex.pc_add <= if_id.pc_add;
       id_ex.imm_gen <= cif.imm_gen; 
       id_ex.alu_src <= cif.alu_src; 
       id_ex.regwrite <= cif.regwrite; 
-      id_ex.memwrite <= cif.memwrit3e; 
+      id_ex.memwrite <= cif.memwrite; 
       id_ex.memread <= cif.memread; 
       id_ex.memreg <= cif.memreg; 
       id_ex.alu_op <= cif.alu_op; 
@@ -124,55 +124,55 @@ assign aluif.alu_op = id_ex.alu_op;
     logic regwrite, memwrite, memread, memreg, jump, auipc, halt, jalr, lui, zero; 
     regbits_t wsel;
     logic [1:0] branch_type;
-  } mem_ex_t;
+  } ex_mem_t;
 
-   mem_ex_t mem_ex;
+   ex_mem_t ex_mem;
 
-  always_ff @(posedge CLK, negedge nRST) begin : MEM_EX_LATCH
+  always_ff @(posedge CLK, negedge nRST) begin : EX_MEM_LATCH
     if(!nRST) begin
-      mem_ex <= '0;
+      ex_mem <= '0;
     end else if (dpif.ihit) begin
-      mem_ex.rdat2 <= id_ex.rdat2; 
-      mem_ex.alu_result <= aluif.result;
-      mem_ex.pc_add <= id_ex.pc_add;
-      mem_ex.imm_gen <= id_ex.imm_gen; // NOT A CONTROL SIGNAL
-      mem_ex.regwrite <= id_ex.regwrite; // determine whether or not we write into a register
-      mem_ex.memwrite <= id_ex.memwrite; // determine whether or not we write into memory
-      mem_ex.memread <= id_ex.memread; // determine whether or not we are reading from memory
-      mem_ex.memreg <= id_ex.memreg; // determine whether or not we take the value from memory or the alu result to be written back 
-      mem_ex.jump <= id_ex.jump; // jump for JAL and JALR (write back block); I think AUIPC too?
-      mem_ex.auipc <= id_ex.cauipc; //auipc ctrl logic
-      mem_ex.halt <= id_ex.halt;
-      mem_ex.jalr <= id_ex.jalr;
-      mem_ex.branch_type <= id_ex.branch_type;
-      mem_ex.lui <= id_ex.lui;
-      mem_ex.zero <= aluif.zero;
-      mem_ex.wsel <= id_ex.wsel;
+      ex_mem.rdat2 <= id_ex.rdat2; 
+      ex_mem.alu_result <= aluif.result;
+      ex_mem.pc_add <= id_ex.pc_add;
+      ex_mem.imm_gen <= id_ex.imm_gen; // NOT A CONTROL SIGNAL
+      ex_mem.regwrite <= id_ex.regwrite; // determine whether or not we write into a register
+      ex_mem.memwrite <= id_ex.memwrite; // determine whether or not we write into memory
+      ex_mem.memread <= id_ex.memread; // determine whether or not we are reading from memory
+      ex_mem.memreg <= id_ex.memreg; // determine whether or not we take the value from memory or the alu result to be written back 
+      ex_mem.jump <= id_ex.jump; // jump for JAL and JALR (write back block); I think AUIPC too?
+      ex_mem.auipc <= id_ex.auipc; //auipc ctrl logic
+      ex_mem.halt <= id_ex.halt;
+      ex_mem.jalr <= id_ex.jalr;
+      ex_mem.branch_type <= id_ex.branch_type;
+      ex_mem.lui <= id_ex.lui;
+      ex_mem.zero <= aluif.zero;
+      ex_mem.wsel <= id_ex.wsel;
     end
   end
  
-assign dpif.dmemstore = mem_ex.rdat2; 
-assign dpif.dmemaddr = mem_ex.result;
-assign dpif.dmemREN = (dpif.dhit) ? 1'b0 : mem_ex.memread;
-assign dpif.dmemWEN = (dpif.dhit) ? 1'b0 : mem_ex.memwrite;
+assign dpif.dmemstore = ex_mem.rdat2; 
+assign dpif.dmemaddr = ex_mem.alu_result;
+assign dpif.dmemREN = (dpif.dhit) ? 1'b0 : ex_mem.memread;
+assign dpif.dmemWEN = (dpif.dhit) ? 1'b0 : ex_mem.memwrite;
 
 
 
 always_comb begin
   next_pc = pc;
-  if(ru.pc_enable) begin
-    next_pc = mem_ex.pc_add; // Don't know if I need this here tbh
-    casez({mem_ex.jump, mem_ex.jalr, mem_ex.branch_type})      
-        4'b1000 : next_pc = pc + mem_ex.imm_gen;
-        4'b0100 : next_pc = mem_ex.result;
-        4'b0010 : next_pc = !(mem_ex.zero) ? pc + cif.imm_gen : mem_ex.pc_add;
-        4'b0001 : next_pc = (mem_ex.zero) ? pc + cif.imm_gen : mem_ex.pc_add;
-        default : next_pc = mem_ex.pc_add;
+  // if(ru.pc_enable) begin
+    next_pc = ex_mem.pc_add; // Don't know if I need this here tbh (no you don't)
+    casez({ex_mem.jump, ex_mem.jalr, ex_mem.branch_type})      
+        4'b1000 : next_pc = pc + ex_mem.imm_gen;
+        4'b0100 : next_pc = ex_mem.alu_result;
+        4'b0010 : next_pc = !(ex_mem.zero) ? pc + cif.imm_gen : ex_mem.pc_add;
+        4'b0001 : next_pc = (ex_mem.zero) ? pc + cif.imm_gen : ex_mem.pc_add;
+        default : next_pc = ex_mem.pc_add;
       endcase
-    end
+  // end
 end
 
-// TOTAL NUMBER OF LATCHED BITS : 145
+// TOTAL NUMBER OF LATCHED BITS : 145 (i think sounds correct, bc auipc/lui)
 
 // ********************* START OF MEMORY : WRITEBACK (MEM/WB) LATCH ********************* //
 
@@ -191,33 +191,62 @@ end
  
  ALSO! Request unit is o longer needed!
 */
+
+/*
+  ok :)
+*/
+
+typedef struct packed {
+  word_t alu_result, memload, pc_add, imm_gen;
+  logic regwrite, memreg, jump, auipc, halt, jalr, lui; 
+  regbits_t wsel;
+} mem_wb_t;
+
+mem_wb_t mem_wb;
+
+always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
+  if(!nRST) begin
+    mem_wb <= '0;
+  end else if (dpif.ihit) begin
+    mem_wb.alu_result <= ex_mem.alu_result;
+    mem_wb.memload <= dpif.dmemload;
+    mem_wb.wsel <= ex_mem.wsel;
+    mem_wb.regwrite <= ex_mem.regwrite;
+    mem_wb.memreg <= ex_mem.memreg;
+    mem_wb.halt <= ex_mem.halt;
+    mem_wb.pc_add <= ex_mem.pc_add;
+    mem_wb.imm_gen <= ex_mem.imm_gen;
+    mem_wb.jump <= ex_mem.jump;
+    mem_wb.auipc <= ex_mem.auipc;
+    mem_wb.jalr <= ex_mem.jalr;
+    mem_wb.lui <= ex_mem.lui;
+  end
+end
  
-assign rfif.wsel = cif.wsel; // this is not going to be the control unit wsel! It will come from the latch!
+assign rfif.wsel = mem_wb.wsel;
 
 
-
-
-assign switch1 = cif.jump | cif.jalr;
+assign switch1 = mem_wb.jump | mem_wb.jalr;
 always_comb begin
-  casez({cif.memreg, switch1, cif.cauipc, cif.lui})
-    4'b0000 : rfif.wdat = aluif.result;
-    4'b0100 : rfif.wdat = pc + 4;
-    4'b0010 : rfif.wdat = pc + cif.imm_gen;
-    4'b0001 : rfif.wdat = cif.imm_gen;
-    default : rfif.wdat = dpif.dmemload;
+  casez({mem_wb.memreg, switch1, mem_wb.auipc, mem_wb.lui})
+    4'b0000 : rfif.wdat = mem_wb.alu_result;
+    4'b0100 : rfif.wdat = mem_wb.pc_add;
+    4'b0010 : rfif.wdat = (mem_wb.pc_add - 4) + mem_wb.imm_gen;
+    4'b0001 : rfif.wdat = mem_wb.imm_gen;
+    default : rfif.wdat = mem_wb.memload; // memreg selected
   endcase
 end
-assign rfif.WEN = cif.regwrite & (dpif.dhit | dpif.ihit);
+assign rfif.WEN = mem_wb.regwrite & (dpif.dhit | dpif.ihit);
 
 
 always_ff @(posedge CLK, negedge nRST) begin
   if(!nRST) begin
     dpif.halt <= 1'b0;
   end else begin
-    dpif.halt <= (dpif.halt | cif.halt);
+    dpif.halt <= (dpif.halt | mem_wb.halt);
   end
 end
 
-
+// TOTAL NUMBER OF LATCHED BITS : 140
 
 endmodule
