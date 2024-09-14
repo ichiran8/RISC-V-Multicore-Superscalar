@@ -26,9 +26,16 @@ module datapath (
   arithmetic_logic_if aluif ();
   request_unit_if ru();
 
-word_t next_pc, pc, portB; //, pc_add;
+word_t next_pc, pc, portB;
+logic switch1;
+
 
 // ********************* MISC *************************** //
+
+register_file rf(CLK, nRST, rfif);
+alu alu(aluif);
+control_unit cu1(cif);
+request_unit ru1(CLK, nRST, ru);
 assign dpif.imemREN = ru.imemREN;
 assign dpif.dmemREN = ru.dmemREN;
 assign dpif.dmemWEN = ru.dmemWEN;
@@ -37,7 +44,6 @@ assign ru.ihit = dpif.ihit;
 assign ru.dhit = dpif.dhit;
 assign rfif.rsel1 = cif.rsel1;
 assign rfif.rsel2 = cif.rsel2;
-assign rfif.wsel = cif.wsel;
 assign dpif.dmemstore = ru.dmemstore; 
 
 //********************** PROGRAM COUNTER ************************** //
@@ -55,8 +61,7 @@ end
 
   
   typedef struct packed {
-    word_t pc_add; // this is the pc + 4 signal
-    word_t instruction;
+    word_t instruction, pc_add;
   } if_id_t;
 
   if_id_t if_id;
@@ -71,18 +76,21 @@ end
   end
 assign cif.instruction = if_id.instruction;
 
+// TOTAL NUMBER OF LATCHED BITS : 64
+
 //********************* START OF INSTRUCTION DECODE : EXECUTE (ID/EX) LATCH ********************* //
 
   typedef struct packed {
     word_t rdat1, rdat2, pc_add, imm_gen;
     aluop_t alu_op;
     logic alu_src, regwrite, memwrite, memread, memreg, jump, auipc, halt, jalr, lui; 
+    regbits_t wsel;
     logic [1:0] branch_type;
   } id_ex_t;
 
   if_ex_t id_ex;
 
-  always_ff begin
+  always_ff @(posedge CLK, negedge nRST) begin : ID_EX_LATCH
     if(!nRST) begin
       id_ex <= '0;
     end else if (dpif.ihit) begin
@@ -102,6 +110,7 @@ assign cif.instruction = if_id.instruction;
       id_ex.jalr <= cif.jalr;
       id_ex.branch_type <= cif.branch_type;
       id_ex.lui <= cif.lui;
+      id_ex.wsel <= cif.wsel;
     end
   end
 
@@ -110,18 +119,21 @@ assign aluif.rda = id_ex.rdat1;
 assign aluif.rdb = portB;
 assign aluif.alu_op = id_ex.alu_op;
 
+// TOTAL NUMBER OF LATCHED BITS : 149 (?)
+
 
 // ********************* START OF EXECUTE : MEMORY (EX/MEM) LATCH ********************* //
 
   typedef struct packed {
     word_t alu_result, pc_add, imm_gen, rdat2;
     logic regwrite, memwrite, memread, memreg, jump, auipc, halt, jalr, lui, zero; 
+    regbits_t wsel;
     logic [1:0] branch_type;
   } mem_ex_t;
 
    mem_ex_t mem_ex;
 
-  always_ff @(posedge CLK, negedge nRST) begin
+  always_ff @(posedge CLK, negedge nRST) begin : MEM_EX_LATCH
     if(!nRST) begin
       mem_ex <= '0;
     end else if (dpif.ihit) begin
@@ -140,6 +152,7 @@ assign aluif.alu_op = id_ex.alu_op;
       mem_ex.branch_type <= id_ex.branch_type;
       mem_ex.lui <= id_ex.lui;
       mem_ex.zero <= aluif.zero;
+      mem_ex.wsel <= id_ex.wsel;
     end
   end
  
@@ -163,21 +176,29 @@ always_comb begin
     end
 end
 
+// TOTAL NUMBER OF LATCHED BITS : 145
 
-
- 
 // ********************* START OF MEMORY : WRITEBACK (MEM/WB) LATCH ********************* //
 
 /*
   Some notes for Mr. Ahmet Oguz, make sure that you modify the halt signal, we need to use the "mem_wb.halt" signal rather
   than the cif.halt signal down below. 
+  pc_add and rdat2 drop out, same with branch_type, I think the rest stay?
+
+  JAL, JALR, memreg, memwrite, cauipc, and lui are ALL signals that are involved with the write back stage
+
+  I can condense every control signal we have into like a [2:0] or even [3:0] signal if needed for it to be concise, but you would lose out
+  on dropping signals along the way
+  such as Branch.
+
+  I need someone to double check whether or not the number of latched bits in the fourth stage is correct; I cannot seem to drop any bits more than 2?
 */
 
+assign rfif.wsel = cif.wsel;
 
 
 
 
-logic switch1;
 assign switch1 = cif.jump | cif.jalr;
 always_comb begin
   casez({cif.memreg, switch1, cif.cauipc, cif.lui})
@@ -200,9 +221,5 @@ always_ff @(posedge CLK, negedge nRST) begin
 end
 
 
-  register_file rf(CLK, nRST, rfif);
-  alu alu(aluif);
-  control_unit cu1(cif);
-  request_unit ru1(CLK, nRST, ru);
 
 endmodule
