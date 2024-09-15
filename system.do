@@ -34,7 +34,7 @@ add wave -noupdate /system_tb/DUT/CPU/DP/dpif/dhit
 add wave -noupdate /system_tb/DUT/CPU/DP/id_ex.memread
 add wave -noupdate /system_tb/DUT/CPU/DP/rf/rfif/WEN
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {2226236 ps} 0}
+WaveRestoreCursors {{Cursor 1} {2145610 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 150
 configure wave -valuecolwidth 100

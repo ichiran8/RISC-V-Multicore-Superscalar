@@ -140,11 +140,13 @@ always_comb begin
 
         end
         LUI : begin
+            cif.alu_src = 1'b1;
             cif.lui = 1'b1;
             cif.imm_gen = {cif.instruction[31:12], 12'd0};
 
         end
         AUIPC : begin // make sure to add to write back block
+            cif.alu_src = 1'b1;
             cif.cauipc = 1'b1;
             cif.imm_gen = {cif.instruction[31:12], 12'd0};
 

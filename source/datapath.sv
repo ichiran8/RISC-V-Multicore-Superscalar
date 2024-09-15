@@ -26,8 +26,9 @@ module datapath (
   arithmetic_logic_if aluif ();
   //request_unit_if ru();
 
-word_t next_pc, pc, portB;
+word_t next_pc, pc, portA, portB;
 logic switch1;
+logic [1:0] forwardA, forwardB;
 
 
 // ********************* MISC *************************** //
@@ -35,6 +36,7 @@ logic switch1;
 register_file rf(CLK, nRST, rfif);
 alu alu(aluif);
 control_unit cu1(cif);
+forwarding_unit forward(.id_ex_rsel1(id_ex.rsel1), .id_ex_rsel2(id_ex.rsel2), .ex_mem_wsel(ex_mem.wsel), .mem_wb_wsel(mem_wb.wsel), .ex_mem_regwrite(ex_mem.regwrite), .mem_wb_regwrite(mem_wb.regwrite), .forwardA(forwardA), .forwardB(forwardB));
 // request_unit ru1(CLK, nRST, ru);
 assign dpif.imemREN = 1'b1;
 assign dpif.imemaddr = pc;
@@ -79,7 +81,7 @@ assign cif.instruction = if_id.instruction;
     word_t rdat1, rdat2, pc_add, imm_gen;
     aluop_t alu_op;
     logic alu_src, regwrite, memwrite, memread, memreg, jump, auipc, halt, jalr, lui; 
-    regbits_t wsel;
+    regbits_t wsel, rsel1, rsel2;
     logic [1:0] branch_type;
   } id_ex_t;
 
@@ -92,6 +94,8 @@ assign cif.instruction = if_id.instruction;
     else if (dpif.ihit | dpif.dhit) begin
       id_ex.rdat1 <= rfif.rdat1;
       id_ex.rdat2 <= rfif.rdat2;
+      id_ex.rsel1 <= rfif.rsel1;
+      id_ex.rsel2 <= rfif.rsel2;
       id_ex.pc_add <= if_id.pc_add;
       id_ex.imm_gen <= cif.imm_gen; 
       id_ex.alu_src <= cif.alu_src; 
@@ -109,8 +113,8 @@ assign cif.instruction = if_id.instruction;
       id_ex.wsel <= cif.wsel;
     end
   end
-
-assign portB = (id_ex.alu_src) ? id_ex.imm_gen : id_ex.rdat2;
+assign portA = (forwardA[1]) ? ex_mem.alu_result : (forwardA[0]) ? mem_wb.alu_result : (id_ex.lui) ? 0 : (id_ex.auipc) ? id_ex.pc_add - 4 :  id_ex.rdat1;
+assign portB = (id_ex.alu_src) ? id_ex.imm_gen : (forwardB[1]) ? ex_mem.alu_result : (forwardB[0]) ? mem_wb.alu_result : id_ex.rdat2;
 assign aluif.rda = id_ex.rdat1;
 assign aluif.rdb = portB;
 assign aluif.alu_op = id_ex.alu_op;
@@ -122,7 +126,7 @@ assign aluif.alu_op = id_ex.alu_op;
 
   typedef struct packed {
     word_t alu_result, pc_add, imm_gen, rdat2;
-    logic regwrite, memwrite, memread, memreg, jump, auipc, halt, jalr, lui, zero; 
+    logic regwrite, memwrite, memread, memreg, jump, auipc, halt, jalr, zero; 
     regbits_t wsel;
     logic [1:0] branch_type;
   } ex_mem_t;
@@ -138,7 +142,7 @@ assign aluif.alu_op = id_ex.alu_op;
       ex_mem.pc_add <= id_ex.pc_add;
       ex_mem.imm_gen <= id_ex.imm_gen; // NOT A CONTROL SIGNAL
       ex_mem.regwrite <= id_ex.regwrite; // determine whether or not we write into a register
-      ex_mem.memwrite <= id_ex.memwrite; // determine whether or not we write into memory
+      ex_mem.memwrite <= dpif.dhit ? 1'b0 : id_ex.memwrite; // determine whether or not we write into memory
       ex_mem.memread <= dpif.dhit ? 1'b0 : id_ex.memread; // determine whether or not we are reading from memory
       ex_mem.memreg <= dpif.dhit ? 1'b0 : id_ex.memreg; // determine whether or not we take the value from memory or the alu result to be written back 
       ex_mem.jump <= id_ex.jump; // jump for JAL and JALR (write back block); I think AUIPC too?
@@ -146,7 +150,6 @@ assign aluif.alu_op = id_ex.alu_op;
       ex_mem.halt <= id_ex.halt;
       ex_mem.jalr <= id_ex.jalr;
       ex_mem.branch_type <= id_ex.branch_type;
-      ex_mem.lui <= id_ex.lui;
       ex_mem.zero <= aluif.zero;
       ex_mem.wsel <= id_ex.wsel;
     end
@@ -198,8 +201,8 @@ end
 */
 
 typedef struct packed {
-  word_t alu_result, memload, pc_add, imm_gen;
-  logic regwrite, memreg, jump, auipc, halt, jalr, lui; 
+  word_t alu_result, memload, pc_add;
+  logic regwrite, memreg, jump, auipc, halt, jalr; 
   regbits_t wsel;
 } mem_wb_t;
 
@@ -216,11 +219,9 @@ always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
     mem_wb.memreg <= ex_mem.memreg;
     mem_wb.halt <= ex_mem.halt;
     mem_wb.pc_add <= ex_mem.pc_add;
-    mem_wb.imm_gen <= ex_mem.imm_gen;
     mem_wb.jump <= ex_mem.jump;
     mem_wb.auipc <= ex_mem.auipc;
     mem_wb.jalr <= ex_mem.jalr;
-    mem_wb.lui <= ex_mem.lui;
   end
 end
  
@@ -229,15 +230,13 @@ assign rfif.wsel = mem_wb.wsel;
 
 assign switch1 = mem_wb.jump | mem_wb.jalr;
 always_comb begin
-  casez({mem_wb.memreg, switch1, mem_wb.auipc, mem_wb.lui})
-    4'b0000 : rfif.wdat = mem_wb.alu_result;
-    4'b0100 : rfif.wdat = mem_wb.pc_add;
-    4'b0010 : rfif.wdat = (mem_wb.pc_add - 4) + mem_wb.imm_gen;
-    4'b0001 : rfif.wdat = mem_wb.imm_gen;
+  casez({mem_wb.memreg, switch1})
+    2'b00 : rfif.wdat = mem_wb.alu_result;
+    2'b01 : rfif.wdat = mem_wb.pc_add;
     default : rfif.wdat = mem_wb.memload; // memreg selected
   endcase
 end
-assign rfif.WEN = mem_wb.regwrite;
+assign rfif.WEN = (dpif.ihit) ? 1'b0 : mem_wb.regwrite;
 
 
 always_ff @(posedge CLK, negedge nRST) begin
