@@ -24,11 +24,44 @@ module datapath (
   register_file_if rfif ();
   control_unit_if cif ();
   arithmetic_logic_if aluif ();
-  //request_unit_if ru();
 
 word_t next_pc, pc, portA, portB;
 logic switch1;
 logic [1:0] forwardA, forwardB;
+
+  typedef struct packed {
+    word_t instruction, pc_add, curr_pc;
+  } if_id_t;
+
+  if_id_t if_id;
+
+  typedef struct packed {
+    word_t rdat1, rdat2, pc_add, imm_gen, curr_pc;
+    aluop_t alu_op;
+    logic alu_src, regwrite, memwrite, memread, memreg, jump, auipc, halt, jalr, lui; 
+    regbits_t wsel, rsel1, rsel2;
+    logic [1:0] branch_type;
+  } id_ex_t;
+
+  id_ex_t id_ex;
+
+  typedef struct packed {
+    word_t alu_result, pc_add, imm_gen, dmemstore, curr_pc;
+    logic regwrite, memwrite, memread, memreg, jump, halt, jalr, zero, lui, auipc; 
+    regbits_t wsel;
+    logic [1:0] branch_type;
+  } ex_mem_t;
+
+   ex_mem_t ex_mem;
+
+
+typedef struct packed {
+  word_t memload, alu_result, write_selected;
+  logic regwrite, memreg, halt; 
+  regbits_t wsel;
+} mem_wb_t;
+
+mem_wb_t mem_wb;
 
 
 // ********************* MISC *************************** //
@@ -37,7 +70,6 @@ register_file rf(CLK, nRST, rfif);
 alu alu(aluif);
 control_unit cu1(cif);
 forwarding_unit forward(.id_ex_rsel1(id_ex.rsel1), .id_ex_rsel2(id_ex.rsel2), .ex_mem_wsel(ex_mem.wsel), .mem_wb_wsel(mem_wb.wsel), .ex_mem_regwrite(ex_mem.regwrite), .mem_wb_regwrite(mem_wb.regwrite), .forwardA(forwardA), .forwardB(forwardB));
-// request_unit ru1(CLK, nRST, ru);
 assign dpif.imemREN = 1'b1;
 assign dpif.imemaddr = pc;
 assign rfif.rsel1 = cif.rsel1;
@@ -56,19 +88,13 @@ end
 
   //********************* START OF INSTRUCTION FETCH : INSTRUCTION DECODE (IF/ID) LATCH *********************//
 
-  
-  typedef struct packed {
-    word_t instruction, pc_add;
-  } if_id_t;
-
-  if_id_t if_id;
-
   always_ff @(posedge CLK, negedge nRST) begin : IF_ID_LATCH
     if(!nRST) begin // add flush here
       if_id <= '0;
-    end else if (dpif.ihit| dpif.dhit) begin
+    end else if (dpif.ihit) begin
       if_id.instruction <= dpif.imemload;
       if_id.pc_add <= pc + 4;
+      if_id.curr_pc <= pc;
     end
   end
 assign cif.instruction = if_id.instruction;
@@ -77,26 +103,17 @@ assign cif.instruction = if_id.instruction;
 
 //********************* START OF INSTRUCTION DECODE : EXECUTE (ID/EX) LATCH ********************* //
 
-  typedef struct packed {
-    word_t rdat1, rdat2, pc_add, imm_gen;
-    aluop_t alu_op;
-    logic alu_src, regwrite, memwrite, memread, memreg, jump, auipc, halt, jalr, lui; 
-    regbits_t wsel, rsel1, rsel2;
-    logic [1:0] branch_type;
-  } id_ex_t;
-
-  id_ex_t id_ex;
-
   always_ff @(posedge CLK, negedge nRST) begin : ID_EX_LATCH
     if(!nRST) begin
       id_ex <= '0;
     end 
-    else if (dpif.ihit | dpif.dhit) begin
+    else if (dpif.ihit) begin
       id_ex.rdat1 <= rfif.rdat1;
       id_ex.rdat2 <= rfif.rdat2;
       id_ex.rsel1 <= rfif.rsel1;
       id_ex.rsel2 <= rfif.rsel2;
       id_ex.pc_add <= if_id.pc_add;
+      id_ex.curr_pc <= if_id.curr_pc;
       id_ex.imm_gen <= cif.imm_gen; 
       id_ex.alu_src <= cif.alu_src; 
       id_ex.regwrite <= cif.regwrite; 
@@ -113,9 +130,10 @@ assign cif.instruction = if_id.instruction;
       id_ex.wsel <= cif.wsel;
     end
   end
-assign portA = (forwardA[1]) ? ex_mem.alu_result : (forwardA[0]) ? mem_wb.alu_result : (id_ex.lui) ? 0 : (id_ex.auipc) ? id_ex.pc_add - 4 :  id_ex.rdat1;
-assign portB = (id_ex.alu_src) ? id_ex.imm_gen : (forwardB[1]) ? ex_mem.alu_result : (forwardB[0]) ? mem_wb.alu_result : id_ex.rdat2;
-assign aluif.rda = id_ex.rdat1;
+
+assign portA = forwardA[1] ? ex_mem.alu_result : forwardA[0] ? mem_wb.alu_result : (id_ex.auipc) ? id_ex.curr_pc : (id_ex.lui) ? 0 : id_ex.rdat1;
+assign portB = forwardB[1] ? ex_mem.alu_result : forwardB[0] ? mem_wb.alu_result : (id_ex.alu_src) ? id_ex.imm_gen : id_ex.rdat2;
+assign aluif.rda = portA;
 assign aluif.rdb = portB;
 assign aluif.alu_op = id_ex.alu_op;
 
@@ -124,38 +142,33 @@ assign aluif.alu_op = id_ex.alu_op;
 
 // ********************* START OF EXECUTE : MEMORY (EX/MEM) LATCH ********************* //
 
-  typedef struct packed {
-    word_t alu_result, pc_add, imm_gen, rdat2;
-    logic regwrite, memwrite, memread, memreg, jump, auipc, halt, jalr, zero; 
-    regbits_t wsel;
-    logic [1:0] branch_type;
-  } ex_mem_t;
 
-   ex_mem_t ex_mem;
 
   always_ff @(posedge CLK, negedge nRST) begin : EX_MEM_LATCH
     if(!nRST) begin
       ex_mem <= '0;
     end else if (dpif.ihit | dpif.dhit) begin
-      ex_mem.rdat2 <= id_ex.rdat2; 
       ex_mem.alu_result <= aluif.result;
       ex_mem.pc_add <= id_ex.pc_add;
+      ex_mem.curr_pc <= id_ex.curr_pc;
       ex_mem.imm_gen <= id_ex.imm_gen; // NOT A CONTROL SIGNAL
       ex_mem.regwrite <= id_ex.regwrite; // determine whether or not we write into a register
       ex_mem.memwrite <= dpif.dhit ? 1'b0 : id_ex.memwrite; // determine whether or not we write into memory
       ex_mem.memread <= dpif.dhit ? 1'b0 : id_ex.memread; // determine whether or not we are reading from memory
       ex_mem.memreg <= dpif.dhit ? 1'b0 : id_ex.memreg; // determine whether or not we take the value from memory or the alu result to be written back 
       ex_mem.jump <= id_ex.jump; // jump for JAL and JALR (write back block); I think AUIPC too?
-      ex_mem.auipc <= id_ex.auipc; //auipc ctrl logic
       ex_mem.halt <= id_ex.halt;
       ex_mem.jalr <= id_ex.jalr;
       ex_mem.branch_type <= id_ex.branch_type;
       ex_mem.zero <= aluif.zero;
       ex_mem.wsel <= id_ex.wsel;
+      ex_mem.dmemstore <= id_ex.rdat2;
+      ex_mem.lui <= id_ex.lui;
+      ex_mem.auipc <= id_ex.auipc;
     end
   end
  
-assign dpif.dmemstore = ex_mem.rdat2; 
+assign dpif.dmemstore = ex_mem.dmemstore; 
 assign dpif.dmemaddr = ex_mem.alu_result;
 assign dpif.dmemREN = ex_mem.memread;
 assign dpif.dmemWEN = ex_mem.memwrite;
@@ -163,77 +176,55 @@ assign dpif.dmemWEN = ex_mem.memwrite;
 
 
 always_comb begin
-  next_pc = pc;
-  // if(ru.pc_enable) begin
     next_pc = ex_mem.pc_add; // Don't know if I need this here tbh (no you don't)
     casez({ex_mem.jump, ex_mem.jalr, ex_mem.branch_type})      
-        4'b1000 : next_pc = pc + ex_mem.imm_gen;
+        4'b1000 : next_pc = ex_mem.curr_pc + ex_mem.imm_gen; // this will be wrong
+        4'b1000 : next_pc = ex_mem.curr_pc + ex_mem.imm_gen; // this will be wrong
         4'b0100 : next_pc = ex_mem.alu_result;
-        4'b0010 : next_pc = !(ex_mem.zero) ? pc + cif.imm_gen : ex_mem.pc_add;
-        4'b0001 : next_pc = (ex_mem.zero) ? pc + cif.imm_gen : ex_mem.pc_add;
+        4'b0010 : next_pc = !(ex_mem.zero) ? ex_mem.curr_pc + cif.imm_gen : ex_mem.pc_add; // same with this
+        4'b0001 : next_pc = (ex_mem.zero) ? ex_mem.curr_pc + cif.imm_gen : ex_mem.pc_add; // and this
         default : next_pc = ex_mem.pc_add;
       endcase
   // end
+end
+
+// can straight up do this here
+word_t write_selected;
+assign switch1 = ex_mem.jump | ex_mem.jalr;
+always_comb begin
+  write_selected = 0;
+  casez({switch1, ex_mem.lui, ex_mem.auipc})
+    3'b000 : write_selected = ex_mem.alu_result;
+    3'b100 : write_selected = ex_mem.pc_add;
+    3'b010 : write_selected = ex_mem.imm_gen;
+    3'b001 : write_selected = ex_mem.curr_pc + ex_mem.imm_gen;
+  endcase
 end
 
 // TOTAL NUMBER OF LATCHED BITS : 145 (i think sounds correct, bc auipc/lui)
 
 // ********************* START OF MEMORY : WRITEBACK (MEM/WB) LATCH ********************* //
 
-/*
-  Some notes for Mr. Ahmet Oguz, make sure that you modify the halt signal, we need to use the "mem_wb.halt" signal rather
-  than the cif.halt signal down below. 
-  pc_add and rdat2 drop out, same with branch_type, I think the rest stay?
-
-  JAL, JALR, memreg, memwrite, cauipc, and lui are ALL signals that are involved with the write back stage
-
-  I can condense every control signal we have into like a [2:0] or even [3:0] signal if needed for it to be concise, but you would lose out
-  on dropping signals along the way
-  such as Branch.
-
-  I need someone to double check whether or not the number of latched bits in the fourth stage is correct; I cannot seem to drop any bits more than 2?
- 
- ALSO! Request unit is o longer needed!
-*/
-
-/*
-  ok :)
-*/
-
-typedef struct packed {
-  word_t alu_result, memload, pc_add;
-  logic regwrite, memreg, jump, auipc, halt, jalr; 
-  regbits_t wsel;
-} mem_wb_t;
-
-mem_wb_t mem_wb;
-
 always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
   if(!nRST) begin
     mem_wb <= '0;
   end else if (dpif.ihit | dpif.dhit) begin
-    mem_wb.alu_result <= ex_mem.alu_result;
+    mem_wb.alu_result <= ex_mem.alu_result; // kept bc forwarding uses. if we can use write selected, can remove
     mem_wb.memload <= dpif.dmemload;
     mem_wb.wsel <= ex_mem.wsel;
     mem_wb.regwrite <= ex_mem.regwrite;
     mem_wb.memreg <= ex_mem.memreg;
     mem_wb.halt <= ex_mem.halt;
-    mem_wb.pc_add <= ex_mem.pc_add;
-    mem_wb.jump <= ex_mem.jump;
-    mem_wb.auipc <= ex_mem.auipc;
-    mem_wb.jalr <= ex_mem.jalr;
+    mem_wb.write_selected <= write_selected;
   end
 end
  
 assign rfif.wsel = mem_wb.wsel;
 
-
-assign switch1 = mem_wb.jump | mem_wb.jalr;
 always_comb begin
-  casez({mem_wb.memreg, switch1})
-    2'b00 : rfif.wdat = mem_wb.alu_result;
-    2'b01 : rfif.wdat = mem_wb.pc_add;
-    default : rfif.wdat = mem_wb.memload; // memreg selected
+  casez(mem_wb.memreg) 
+    1'b0 : rfif.wdat = mem_wb.write_selected; // decision making done before, reducing latches
+    1'b1 : rfif.wdat = mem_wb.memload; // memreg selected
   endcase
 end
 assign rfif.WEN = (dpif.ihit) ? 1'b0 : mem_wb.regwrite;
@@ -247,6 +238,6 @@ always_ff @(posedge CLK, negedge nRST) begin
   end
 end
 
-// TOTAL NUMBER OF LATCHED BITS : 140
+// TOTAL NUMBER OF LATCHED BITS : 104
 
 endmodule
