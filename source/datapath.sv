@@ -64,7 +64,7 @@ end
   always_ff @(posedge CLK, negedge nRST) begin : IF_ID_LATCH
     if(!nRST) begin // add flush here
       if_id <= '0;
-    end else if (dpif.ihit) begin
+    end else if (dpif.ihit| dpif.dhit) begin
       if_id.instruction <= dpif.imemload;
       if_id.pc_add <= pc + 4;
     end
@@ -88,7 +88,8 @@ assign cif.instruction = if_id.instruction;
   always_ff @(posedge CLK, negedge nRST) begin : ID_EX_LATCH
     if(!nRST) begin
       id_ex <= '0;
-    end else if (dpif.ihit) begin
+    end 
+    else if (dpif.ihit | dpif.dhit) begin
       id_ex.rdat1 <= rfif.rdat1;
       id_ex.rdat2 <= rfif.rdat2;
       id_ex.pc_add <= if_id.pc_add;
@@ -131,15 +132,15 @@ assign aluif.alu_op = id_ex.alu_op;
   always_ff @(posedge CLK, negedge nRST) begin : EX_MEM_LATCH
     if(!nRST) begin
       ex_mem <= '0;
-    end else if (dpif.ihit) begin
+    end else if (dpif.ihit | dpif.dhit) begin
       ex_mem.rdat2 <= id_ex.rdat2; 
       ex_mem.alu_result <= aluif.result;
       ex_mem.pc_add <= id_ex.pc_add;
       ex_mem.imm_gen <= id_ex.imm_gen; // NOT A CONTROL SIGNAL
       ex_mem.regwrite <= id_ex.regwrite; // determine whether or not we write into a register
       ex_mem.memwrite <= id_ex.memwrite; // determine whether or not we write into memory
-      ex_mem.memread <= id_ex.memread; // determine whether or not we are reading from memory
-      ex_mem.memreg <= id_ex.memreg; // determine whether or not we take the value from memory or the alu result to be written back 
+      ex_mem.memread <= dpif.dhit ? 1'b0 : id_ex.memread; // determine whether or not we are reading from memory
+      ex_mem.memreg <= dpif.dhit ? 1'b0 : id_ex.memreg; // determine whether or not we take the value from memory or the alu result to be written back 
       ex_mem.jump <= id_ex.jump; // jump for JAL and JALR (write back block); I think AUIPC too?
       ex_mem.auipc <= id_ex.auipc; //auipc ctrl logic
       ex_mem.halt <= id_ex.halt;
@@ -153,8 +154,8 @@ assign aluif.alu_op = id_ex.alu_op;
  
 assign dpif.dmemstore = ex_mem.rdat2; 
 assign dpif.dmemaddr = ex_mem.alu_result;
-assign dpif.dmemREN = (dpif.dhit) ? 1'b0 : ex_mem.memread;
-assign dpif.dmemWEN = (dpif.dhit) ? 1'b0 : ex_mem.memwrite;
+assign dpif.dmemREN = ex_mem.memread;
+assign dpif.dmemWEN = ex_mem.memwrite;
 
 
 
@@ -207,7 +208,7 @@ mem_wb_t mem_wb;
 always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
   if(!nRST) begin
     mem_wb <= '0;
-  end else if (dpif.ihit) begin
+  end else if (dpif.ihit | dpif.dhit) begin
     mem_wb.alu_result <= ex_mem.alu_result;
     mem_wb.memload <= dpif.dmemload;
     mem_wb.wsel <= ex_mem.wsel;
@@ -236,7 +237,7 @@ always_comb begin
     default : rfif.wdat = mem_wb.memload; // memreg selected
   endcase
 end
-assign rfif.WEN = mem_wb.regwrite & (dpif.dhit | dpif.ihit);
+assign rfif.WEN = mem_wb.regwrite;
 
 
 always_ff @(posedge CLK, negedge nRST) begin
