@@ -46,13 +46,7 @@ always_comb begin
         RTYPE : begin
             //cif.regwrite = 1'b1; 
             casez(funct3_r) 
-               // ADD_SUB : cif.alu_op = (funct7_r == ADD) ? ALU_ADD : ALU_SUB;
-               ADD_SUB : //cif.alu_op = (cif.instruction[30]) ? ALU_SUB;
-                    begin
-                        if(cif.instruction[30])  begin
-                            cif.alu_op = ALU_SUB;
-                        end
-                    end
+               ADD_SUB : cif.alu_op = (cif.instruction[30]) ? ALU_SUB : ALU_ADD;
                 SLL     : cif.alu_op = ALU_SLL;
                 SLT     : cif.alu_op = ALU_SLT;
                 SLTU    : cif.alu_op = ALU_SLTU;
@@ -64,7 +58,6 @@ always_comb begin
         end
         ITYPE : begin
             cif.alu_src = 1'b1; // we are taking the immediate value
-            //cif.regwrite = 1'b1; // we are writing back into the register
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:20]};
             casez(funct3_i) 
                 //ADDI  : cif.alu_op = ALU_ADD;
@@ -79,7 +72,6 @@ always_comb begin
         end
         ITYPE_LW : begin
             cif.alu_src = 1'b1; // we are taking the immediate value 
-            //cif.regwrite = 1'b1; // we are writing to the register 
             cif.memread = 1'b1; // we are reading from memory
             cif.memreg = 1'b1; // we are trying to take the value that we read from memory and place it into a reg
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:20]};
