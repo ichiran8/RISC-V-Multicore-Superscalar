@@ -44,7 +44,6 @@ always_comb begin
     cif.lui = 1'b0;
     casez(opcode)
         RTYPE : begin
-            //cif.regwrite = 1'b1; 
             casez(funct3_r) 
                ADD_SUB : cif.alu_op = (cif.instruction[30]) ? ALU_SUB : ALU_ADD;
                 SLL     : cif.alu_op = ALU_SLL;
@@ -80,7 +79,6 @@ always_comb begin
         JALR : begin // you are jumping to a label and also linking the return address to the jump of the label (?)
                      // JALR also can add using mux because rs1 will be 0 here (default case); make sure to add to write back block
             cif.alu_src = 1'b1; // we are taking the immediate value 
-            //cif.regwrite = 1'b1; // we are writing back into a register
             cif.jalr = 1'b1;
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:20]};
         end
@@ -93,36 +91,31 @@ always_comb begin
         end 
         BTYPE : begin
             cif.regwrite = 1'b0;
-            cif.branch_type = 2'd1;
-            //cif.alu_op = ALU_SUB;
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[7], cif.instruction[30:25], cif.instruction[11:8], 1'b0};
             casez(funct3_b) 
                 BEQ : begin
-                    cif.alu_op = ALU_SUB;
-                    //cif.branch_type = 2'd1;
+                    cif.alu_op = ALU_XOR;
+                    cif.branch_type = 2'd1;
                 end
                 BNE : begin
-                    cif.alu_op = ALU_SUB;
-                    //cif.branch_type = !cif.zero;
+                    cif.alu_op = ALU_XOR;
                     cif.branch_type = 2'd2;
                 end
                 BLT : begin 
                     cif.alu_op = ALU_SLT;
-                    //cif.branch_type = !cif.zero;
                     cif.branch_type = 2'd2;
                 end
                 BGE : begin
                      cif.alu_op = ALU_SLT;
-                     //cif.branch_type = 2'd1;
+                     cif.branch_type = 2'd1;
                 end
                 BLTU : begin
                      cif.alu_op = ALU_SLTU;
-                     //cif.branch_type = !cif.zero;
                      cif.branch_type = 2'd2;
                 end
                 BGEU : begin
                     cif.alu_op = ALU_SLTU;
-                    //cif.branch_type = 2'd1;
+                    cif.branch_type = 2'd1;
                 end
             endcase
         end
@@ -132,13 +125,13 @@ always_comb begin
 
         end
         LUI : begin
-            cif.alu_src = 1'b1;
+           // cif.alu_src = 1'b1;
             cif.lui = 1'b1;
             cif.imm_gen = {cif.instruction[31:12], 12'd0};
 
         end
         AUIPC : begin // make sure to add to write back block
-            cif.alu_src = 1'b1;
+           // cif.alu_src = 1'b1;
             cif.cauipc = 1'b1;
             cif.imm_gen = {cif.instruction[31:12], 12'd0};
 

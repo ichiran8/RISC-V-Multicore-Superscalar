@@ -46,17 +46,16 @@ logic [1:0] forwardA, forwardB;
   id_ex_t id_ex;
 
   typedef struct packed {
-    word_t alu_result, pc_add, imm_gen, dmemstore, curr_pc;
-    logic regwrite, memwrite, memread, memreg, jump, halt, jalr, zero, lui, auipc; 
+    word_t write_selected, dmemstore, pc_add, curr_pc, imm_gen;
+    logic regwrite, memwrite, memread, memreg, halt, jump, jalr, branch; 
     regbits_t wsel;
-    logic [1:0] branch_type;
   } ex_mem_t;
 
    ex_mem_t ex_mem;
 
 
 typedef struct packed {
-  word_t memload, alu_result, write_selected;
+  word_t memload, write_selected;
   logic regwrite, memreg, halt; 
   regbits_t wsel;
 } mem_wb_t;
@@ -131,11 +130,25 @@ assign cif.instruction = if_id.instruction;
     end
   end
 
-assign portA = forwardA[1] ? ex_mem.alu_result : forwardA[0] ? mem_wb.alu_result : (id_ex.auipc) ? id_ex.curr_pc : (id_ex.lui) ? 0 : id_ex.rdat1;
-assign portB = forwardB[1] ? ex_mem.alu_result : forwardB[0] ? mem_wb.alu_result : (id_ex.alu_src) ? id_ex.imm_gen : id_ex.rdat2;
+assign portA = forwardA[1] ? ex_mem.write_selected : forwardA[0] ? mem_wb.write_selected : id_ex.rdat1;
+assign portB = forwardB[1] ? ex_mem.write_selected : forwardB[0] ? mem_wb.write_selected : (id_ex.alu_src) ? id_ex.imm_gen : id_ex.rdat2;
 assign aluif.rda = portA;
 assign aluif.rdb = portB;
 assign aluif.alu_op = id_ex.alu_op;
+
+
+// can straight up do this here
+word_t write_selected;
+assign switch1 = id_ex.jump | id_ex.jalr;
+always_comb begin
+  write_selected = aluif.result;
+  casez({switch1, id_ex.lui, id_ex.auipc})
+    //3'b000 : write_selected = aluif.result;
+    3'b1?? : write_selected = id_ex.pc_add;
+    3'b?1? : write_selected = id_ex.imm_gen;
+    3'b??1 : write_selected = id_ex.curr_pc + id_ex.imm_gen;
+  endcase
+end
 
 // TOTAL NUMBER OF LATCHED BITS : 149 (?)
 
@@ -148,7 +161,7 @@ assign aluif.alu_op = id_ex.alu_op;
     if(!nRST) begin
       ex_mem <= '0;
     end else if (dpif.ihit | dpif.dhit) begin
-      ex_mem.alu_result <= aluif.result;
+      ex_mem.write_selected <= write_selected; // this is put above
       ex_mem.pc_add <= id_ex.pc_add;
       ex_mem.curr_pc <= id_ex.curr_pc;
       ex_mem.imm_gen <= id_ex.imm_gen; // NOT A CONTROL SIGNAL
@@ -159,47 +172,28 @@ assign aluif.alu_op = id_ex.alu_op;
       ex_mem.jump <= id_ex.jump; // jump for JAL and JALR (write back block); I think AUIPC too?
       ex_mem.halt <= id_ex.halt;
       ex_mem.jalr <= id_ex.jalr;
-      ex_mem.branch_type <= id_ex.branch_type;
-      ex_mem.zero <= aluif.zero;
+      ex_mem.branch <= (id_ex.branch_type[0] & (aluif.zero)) | (id_ex.branch_type[1] & !(aluif.zero)) ? 1'b1 : 1'b0;
       ex_mem.wsel <= id_ex.wsel;
       ex_mem.dmemstore <= id_ex.rdat2;
-      ex_mem.lui <= id_ex.lui;
-      ex_mem.auipc <= id_ex.auipc;
     end
   end
  
 assign dpif.dmemstore = ex_mem.dmemstore; 
-assign dpif.dmemaddr = ex_mem.alu_result;
+assign dpif.dmemaddr = ex_mem.write_selected;
 assign dpif.dmemREN = ex_mem.memread;
 assign dpif.dmemWEN = ex_mem.memwrite;
 
-
-
 always_comb begin
     next_pc = ex_mem.pc_add; // Don't know if I need this here tbh (no you don't)
-    casez({ex_mem.jump, ex_mem.jalr, ex_mem.branch_type})      
-        4'b1000 : next_pc = ex_mem.curr_pc + ex_mem.imm_gen; // this will be wrong
-        4'b1000 : next_pc = ex_mem.curr_pc + ex_mem.imm_gen; // this will be wrong
-        4'b0100 : next_pc = ex_mem.alu_result;
-        4'b0010 : next_pc = !(ex_mem.zero) ? ex_mem.curr_pc + cif.imm_gen : ex_mem.pc_add; // same with this
-        4'b0001 : next_pc = (ex_mem.zero) ? ex_mem.curr_pc + cif.imm_gen : ex_mem.pc_add; // and this
-        default : next_pc = ex_mem.pc_add;
+    casez({ex_mem.jump, ex_mem.jalr, ex_mem.branch})      
+        //3'b000 : next_pc = ex_mem.pc_add;
+        3'b1?? : next_pc = ex_mem.curr_pc + ex_mem.imm_gen; // this will be wrong
+        3'b?1? : next_pc = ex_mem.write_selected;
+        3'b??1 : next_pc = ex_mem.curr_pc + ex_mem.imm_gen; //: ex_mem.pc_add; // same with this
       endcase
   // end
 end
 
-// can straight up do this here
-word_t write_selected;
-assign switch1 = ex_mem.jump | ex_mem.jalr;
-always_comb begin
-  write_selected = 0;
-  casez({switch1, ex_mem.lui, ex_mem.auipc})
-    3'b000 : write_selected = ex_mem.alu_result;
-    3'b100 : write_selected = ex_mem.pc_add;
-    3'b010 : write_selected = ex_mem.imm_gen;
-    3'b001 : write_selected = ex_mem.curr_pc + ex_mem.imm_gen;
-  endcase
-end
 
 // TOTAL NUMBER OF LATCHED BITS : 145 (i think sounds correct, bc auipc/lui)
 
@@ -209,24 +203,18 @@ always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
   if(!nRST) begin
     mem_wb <= '0;
   end else if (dpif.ihit | dpif.dhit) begin
-    mem_wb.alu_result <= ex_mem.alu_result; // kept bc forwarding uses. if we can use write selected, can remove
     mem_wb.memload <= dpif.dmemload;
     mem_wb.wsel <= ex_mem.wsel;
     mem_wb.regwrite <= ex_mem.regwrite;
     mem_wb.memreg <= ex_mem.memreg;
     mem_wb.halt <= ex_mem.halt;
-    mem_wb.write_selected <= write_selected;
+    mem_wb.write_selected <= ex_mem.write_selected;
   end
 end
  
 assign rfif.wsel = mem_wb.wsel;
 
-always_comb begin
-  casez(mem_wb.memreg) 
-    1'b0 : rfif.wdat = mem_wb.write_selected; // decision making done before, reducing latches
-    1'b1 : rfif.wdat = mem_wb.memload; // memreg selected
-  endcase
-end
+assign rfif.wdat = (mem_wb.memreg) ? mem_wb.memload : mem_wb.write_selected;
 assign rfif.WEN = (dpif.ihit) ? 1'b0 : mem_wb.regwrite;
 
 
