@@ -26,7 +26,7 @@ module datapath (
   arithmetic_logic_if aluif ();
 
 word_t next_pc, pc, portA, portB;
-logic switch1;
+logic switch1, PCWrite, if_id_write, hazard_flush_id_ex; // we're going to have two flush signals for id_ex, so seperated names
 logic [1:0] forwardA, forwardB;
 
   typedef struct packed {
@@ -69,6 +69,7 @@ register_file rf(CLK, nRST, rfif);
 alu alu(aluif);
 control_unit cu1(cif);
 forwarding_unit forward(.id_ex_rsel1(id_ex.rsel1), .id_ex_rsel2(id_ex.rsel2), .ex_mem_wsel(ex_mem.wsel), .mem_wb_wsel(mem_wb.wsel), .ex_mem_regwrite(ex_mem.regwrite), .mem_wb_regwrite(mem_wb.regwrite), .forwardA(forwardA), .forwardB(forwardB));
+hazard_unit hazarding(.id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write), .flush_id_ex(hazard_flush_id_ex));
 assign dpif.imemREN = 1'b1;
 assign dpif.imemaddr = pc;
 assign rfif.rsel1 = cif.rsel1;
@@ -79,7 +80,7 @@ assign rfif.rsel2 = cif.rsel2;
 always_ff @(posedge CLK, negedge nRST) begin
   if(!nRST) begin
     pc <= '0;
-  end else begin // include the dHit and iHit signals
+  end else if(PCWrite) begin // include the dHit and iHit signals
     pc <= next_pc;//(ru.pc_enable) ? next_pc : pc;
   end
 end
@@ -90,7 +91,7 @@ end
   always_ff @(posedge CLK, negedge nRST) begin : IF_ID_LATCH
     if(!nRST) begin // add flush here
       if_id <= '0;
-    end else if (dpif.ihit) begin
+    end else if (dpif.ihit && if_id_write) begin
       if_id.instruction <= dpif.imemload;
       if_id.pc_add <= pc + 4;
       if_id.curr_pc <= pc;
@@ -107,26 +108,30 @@ assign cif.instruction = if_id.instruction;
       id_ex <= '0;
     end 
     else if (dpif.ihit) begin
-      id_ex.rdat1 <= rfif.rdat1;
-      id_ex.rdat2 <= rfif.rdat2;
-      id_ex.rsel1 <= rfif.rsel1;
-      id_ex.rsel2 <= rfif.rsel2;
-      id_ex.pc_add <= if_id.pc_add;
-      id_ex.curr_pc <= if_id.curr_pc;
-      id_ex.imm_gen <= cif.imm_gen; 
-      id_ex.alu_src <= cif.alu_src; 
-      id_ex.regwrite <= cif.regwrite; 
-      id_ex.memwrite <= cif.memwrite; 
-      id_ex.memread <= cif.memread; 
-      id_ex.memreg <= cif.memreg; 
-      id_ex.alu_op <= cif.alu_op; 
-      id_ex.jump <= cif.jump; 
-      id_ex.auipc <= cif.cauipc; 
-      id_ex.halt <= cif.halt;
-      id_ex.jalr <= cif.jalr;
-      id_ex.branch_type <= cif.branch_type;
-      id_ex.lui <= cif.lui;
-      id_ex.wsel <= cif.wsel;
+      if(hazard_flush_id_ex)
+        id_ex <= '0;
+      else begin
+        id_ex.rdat1 <= rfif.rdat1;
+        id_ex.rdat2 <= rfif.rdat2;
+        id_ex.rsel1 <= rfif.rsel1;
+        id_ex.rsel2 <= rfif.rsel2;
+        id_ex.pc_add <= if_id.pc_add;
+        id_ex.curr_pc <= if_id.curr_pc;
+        id_ex.imm_gen <= cif.imm_gen; 
+        id_ex.alu_src <= cif.alu_src; 
+        id_ex.regwrite <= cif.regwrite; 
+        id_ex.memwrite <= cif.memwrite; 
+        id_ex.memread <= cif.memread; 
+        id_ex.memreg <= cif.memreg; 
+        id_ex.alu_op <= cif.alu_op; 
+        id_ex.jump <= cif.jump; 
+        id_ex.auipc <= cif.cauipc; 
+        id_ex.halt <= cif.halt;
+        id_ex.jalr <= cif.jalr;
+        id_ex.branch_type <= cif.branch_type;
+        id_ex.lui <= cif.lui;
+        id_ex.wsel <= cif.wsel;
+      end
     end
   end
 
