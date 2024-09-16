@@ -10,6 +10,7 @@ add wave -noupdate /system_tb/DUT/CPU/DP/pc
 add wave -noupdate /system_tb/DUT/CPU/dcif/ihit
 add wave -noupdate /system_tb/DUT/CPU/dcif/dhit
 add wave -noupdate -divider {Register File}
+add wave -noupdate -group {Register File} /system_tb/DUT/CPU/DP/rf/registers
 add wave -noupdate -group {Register File} /system_tb/DUT/CPU/DP/rf/rfif/WEN
 add wave -noupdate -group {Register File} /system_tb/DUT/CPU/DP/rf/rfif/wsel
 add wave -noupdate -group {Register File} /system_tb/DUT/CPU/DP/rf/rfif/rsel1
@@ -50,7 +51,6 @@ add wave -noupdate -group ID_EX /system_tb/DUT/CPU/DP/id_ex.wsel
 add wave -noupdate -group ID_EX /system_tb/DUT/CPU/DP/id_ex.rsel1
 add wave -noupdate -group ID_EX /system_tb/DUT/CPU/DP/id_ex.rsel2
 add wave -noupdate -group ID_EX /system_tb/DUT/CPU/DP/id_ex.branch_type
-add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.alu_result
 add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.pc_add
 add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.imm_gen
 add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.dmemstore
@@ -62,20 +62,29 @@ add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.memreg
 add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.jump
 add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.halt
 add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.jalr
-add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.zero
-add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.lui
-add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.auipc
 add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.wsel
-add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.branch_type
+add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.write_selected
 add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.memload
-add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.alu_result
 add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.write_selected
 add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.regwrite
 add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.memreg
 add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.halt
+add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.write_selected
 add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.wsel
+add wave -noupdate -divider Forwarding
+add wave -noupdate -group Forwarding /system_tb/DUT/CPU/DP/portA
+add wave -noupdate -group Forwarding /system_tb/DUT/CPU/DP/portB
+add wave -noupdate -group Forwarding /system_tb/DUT/CPU/DP/forwardA
+add wave -noupdate -group Forwarding /system_tb/DUT/CPU/DP/forwardB
+add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/rda
+add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/rdb
+add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/result
+add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/zero
+add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/negative
+add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/overflow
+add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/alu_op
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {4448400 ps} 0}
+WaveRestoreCursors {{Cursor 1} {659895 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 150
 configure wave -valuecolwidth 100
@@ -91,4 +100,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {3799400 ps} {4448400 ps}
+WaveRestoreZoom {1312473900 ps} {1312922058 ps}

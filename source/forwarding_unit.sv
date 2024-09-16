@@ -19,7 +19,7 @@ always_comb begin
 
         if (ex_mem_wsel == id_ex_rsel2) begin 
             forwardB = 2'd2;
-        end else if (mem_wb_wsel == id_ex_rsel1) begin
+        end else if (mem_wb_wsel == id_ex_rsel2) begin
             forwardB = 2'd1;
         end
 

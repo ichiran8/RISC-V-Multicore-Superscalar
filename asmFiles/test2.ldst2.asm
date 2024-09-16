@@ -11,19 +11,16 @@
   
   lui $9, 0xFFFFF
   ori   $4, $0, 0xF00  
-  nop # need to fix these
   sub $4, $4, $9
   
   ori   $10, $0, 0x0800
-    nop
   sub $10, $10, $9
   
   lui $8, 0xEEF
-  nop
   srli $8, $8, 12
-  nop
+  nop # only these nops giving problems
   add   $7, $8, $7
-  nop # this nop is necessary ???
+  nop # 
   lw    $11,0($4)
    lw    $12,4($4)
    lw    $13,8($4)
