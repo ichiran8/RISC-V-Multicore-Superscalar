@@ -98,7 +98,7 @@ end
   end
 assign cif.instruction = if_id.instruction;
 
-// TOTAL NUMBER OF LATCHED BITS : 64
+// TOTAL NUMBER OF LATCHED BITS : 96
 
 //********************* START OF INSTRUCTION DECODE : EXECUTE (ID/EX) LATCH ********************* //
 
@@ -143,14 +143,13 @@ assign switch1 = id_ex.jump | id_ex.jalr;
 always_comb begin
   write_selected = aluif.result;
   casez({switch1, id_ex.lui, id_ex.auipc})
-    //3'b000 : write_selected = aluif.result;
     3'b1?? : write_selected = id_ex.pc_add;
     3'b?1? : write_selected = id_ex.imm_gen;
     3'b??1 : write_selected = id_ex.curr_pc + id_ex.imm_gen;
   endcase
 end
 
-// TOTAL NUMBER OF LATCHED BITS : 149 (?)
+// TOTAL NUMBER OF LATCHED BITS : 191 (?)
 
 
 // ********************* START OF EXECUTE : MEMORY (EX/MEM) LATCH ********************* //
@@ -186,7 +185,6 @@ assign dpif.dmemWEN = ex_mem.memwrite;
 always_comb begin
     next_pc = ex_mem.pc_add; // Don't know if I need this here tbh (no you don't)
     casez({ex_mem.jump, ex_mem.jalr, ex_mem.branch})      
-        //3'b000 : next_pc = ex_mem.pc_add;
         3'b1?? : next_pc = ex_mem.curr_pc + ex_mem.imm_gen; // this will be wrong
         3'b?1? : next_pc = ex_mem.write_selected;
         3'b??1 : next_pc = ex_mem.curr_pc + ex_mem.imm_gen; //: ex_mem.pc_add; // same with this
@@ -195,7 +193,7 @@ always_comb begin
 end
 
 
-// TOTAL NUMBER OF LATCHED BITS : 145 (i think sounds correct, bc auipc/lui)
+// TOTAL NUMBER OF LATCHED BITS : 143 (i think sounds correct, bc auipc/lui)
 
 // ********************* START OF MEMORY : WRITEBACK (MEM/WB) LATCH ********************* //
 
@@ -226,6 +224,6 @@ always_ff @(posedge CLK, negedge nRST) begin
   end
 end
 
-// TOTAL NUMBER OF LATCHED BITS : 104
+// TOTAL NUMBER OF LATCHED BITS : 72
 
 endmodule
