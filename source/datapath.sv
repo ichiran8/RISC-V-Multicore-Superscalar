@@ -214,7 +214,6 @@ always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
     mem_wb.memreg <= ex_mem.memreg;
     mem_wb.dmemload <= dpif.dmemload;
     mem_wb.write_selected <= ex_mem.write_selected;
-    //mem_wb.write_back <= ex_mem.memreg ? dpif.dmemload : ex_mem.write_selected;
   end
 end
  
