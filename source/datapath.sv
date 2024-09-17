@@ -27,6 +27,7 @@ module datapath (
 
 word_t next_pc, pc, portA, portB;
 logic switch1, PCWrite, if_id_write, hazard_flush_id_ex; // we're going to have two flush signals for id_ex, so seperated names
+logic if_flush, id_flush, ex_flush, branch;
 logic [1:0] forwardA, forwardB;
 
   typedef struct packed {
@@ -70,6 +71,8 @@ alu alu(aluif);
 control_unit cu1(cif);
 forwarding_unit forward(.id_ex_rsel1(id_ex.rsel1), .id_ex_rsel2(id_ex.rsel2), .ex_mem_wsel(ex_mem.wsel), .mem_wb_wsel(mem_wb.wsel), .ex_mem_regwrite(ex_mem.regwrite), .mem_wb_regwrite(mem_wb.regwrite), .forwardA(forwardA), .forwardB(forwardB));
 //hazard_unit hazarding(.id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write), .flush_id_ex(hazard_flush_id_ex));
+hazard_unit hazarding(.branch(branch), .jump(id_ex.jump | id_ex.jalr), .halt(dpif.halt), .if_flush(if_flush), .id_flush(id_flush), .ex_flush(ex_flush)); // check halt
+    
 assign dpif.imemREN = 1'b1;
 assign dpif.imemaddr = pc;
 assign rfif.rsel1 = dpif.dhit ? id_ex.rsel1 : cif.rsel1;
@@ -91,7 +94,10 @@ end
   always_ff @(posedge CLK, negedge nRST) begin : IF_ID_LATCH
     if(!nRST) begin // add flush here
       if_id <= '0;
-    end else if (dpif.ihit) begin
+    end
+    else if (if_flush)
+      if_id <= '0;
+    else if (dpif.ihit) begin
       if_id.instruction <= dpif.imemload;
       if_id.pc_add <= pc + 4;
       if_id.curr_pc <= pc;
@@ -106,7 +112,10 @@ assign cif.instruction = if_id.instruction;
   always_ff @(posedge CLK, negedge nRST) begin : ID_EX_LATCH
     if(!nRST) begin
       id_ex <= '0;
-    end else if (dpif.ihit) begin
+    end 
+    // else if (id_flush)
+    //   id_ex <= '0;
+    else if (dpif.ihit) begin
         id_ex.rdat1 <= rfif.rdat1;
         id_ex.rdat2 <= rfif.rdat2;
         id_ex.rsel1 <= rfif.rsel1;
@@ -151,7 +160,7 @@ always_comb begin
     3'b??1 : write_selected = id_ex.curr_pc + id_ex.imm_gen;
   endcase
 end
-logic branch;
+//logic branch;
 
 assign branch = (id_ex.branch_type[0] & (aluif.zero)) | (id_ex.branch_type[1] & !(aluif.zero));
 always_comb begin
@@ -173,9 +182,13 @@ end
   always_ff @(posedge CLK, negedge nRST) begin : EX_MEM_LATCH
     if(!nRST) begin
       ex_mem <= '0;
-    end else if (dpif.dhit) begin
+    end 
+    else if (dpif.dhit) begin
       ex_mem <= '0;
-    end else if (dpif.ihit) begin
+    end 
+    // else if (ex_flush)
+    //   ex_mem <= '0;
+    else if (dpif.ihit) begin
       ex_mem.write_selected <= write_selected; // this is put above
       ex_mem.pc_add <= id_ex.pc_add;
       ex_mem.curr_pc <= id_ex.curr_pc;

@@ -64,7 +64,6 @@ add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.halt
 add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.jalr
 add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.wsel
 add wave -noupdate -group EX_MEM /system_tb/DUT/CPU/DP/ex_mem.write_selected
-add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.memload
 add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.write_selected
 add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.regwrite
 add wave -noupdate -group MEM_WB /system_tb/DUT/CPU/DP/mem_wb.memreg
@@ -83,8 +82,15 @@ add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/zero
 add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/negative
 add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/overflow
 add wave -noupdate -group ALU /system_tb/DUT/CPU/DP/alu/aluif/alu_op
+add wave -noupdate -divider Hazarding
+add wave -noupdate -group Hazarding /system_tb/DUT/CPU/DP/hazarding/branch
+add wave -noupdate -group Hazarding /system_tb/DUT/CPU/DP/hazarding/jump
+add wave -noupdate -group Hazarding /system_tb/DUT/CPU/DP/hazarding/halt
+add wave -noupdate -group Hazarding /system_tb/DUT/CPU/DP/hazarding/if_flush
+add wave -noupdate -group Hazarding /system_tb/DUT/CPU/DP/hazarding/id_flush
+add wave -noupdate -group Hazarding /system_tb/DUT/CPU/DP/hazarding/ex_flush
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {659895 ps} 0}
+WaveRestoreCursors {{Cursor 1} {1311638986 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 150
 configure wave -valuecolwidth 100
@@ -100,4 +106,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {1312473900 ps} {1312922058 ps}
+WaveRestoreZoom {1311534250 ps} {1311926457 ps}

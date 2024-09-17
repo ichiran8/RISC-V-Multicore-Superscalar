@@ -10,7 +10,7 @@ always_comb begin
     casez(aluif.alu_op) 
         ALU_SLL : aluif.result = aluif.rda << aluif.rdb[4:0];
         ALU_SRL : aluif.result = aluif.rda >> aluif.rdb[4:0];
-        ALU_SRA : aluif.result = $signed(aluif.rda) >>> $signed(aluif.rdb[4:0]);
+        ALU_SRA : aluif.result = $signed(aluif.rda) >>> $unsigned(aluif.rdb[4:0]);
         ALU_ADD : begin 
             aluif.result = $signed(aluif.rda) + $signed(aluif.rdb);
                 if((aluif.rda[31] && aluif.rdb[31] && !aluif.result[31]) || (!aluif.rda[31] && !aluif.rdb[31] && aluif.result[31])) begin
