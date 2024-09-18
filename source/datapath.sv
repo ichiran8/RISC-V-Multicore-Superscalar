@@ -25,7 +25,7 @@ module datapath (
   control_unit_if cif ();
   arithmetic_logic_if aluif ();
 
-word_t next_pc, pc, portA, portB;
+word_t next_pc, pc, portA, portB, write_back;
 logic switch1, PCWrite, if_id_write, hazard_flush_id_ex; // we're going to have two flush signals for id_ex, so seperated names
 logic if_flush, id_flush, ex_flush, branch;
 logic [1:0] forwardA, forwardB;
@@ -47,7 +47,7 @@ logic [1:0] forwardA, forwardB;
   id_ex_t id_ex;
 
   typedef struct packed {
-    word_t write_selected, dmemstore, pc_add, curr_pc, imm_gen, dmemload;
+    word_t write_selected, dmemstore, dmemload;
     logic regwrite, memwrite, memread, memreg, halt, jump, jalr; 
     regbits_t wsel;
   } ex_mem_t;
@@ -56,7 +56,7 @@ logic [1:0] forwardA, forwardB;
 
 
 typedef struct packed {
-  word_t write_selected, dmemload;
+  word_t  write_back;
   logic regwrite, halt, memreg; 
   regbits_t wsel;
 } mem_wb_t;
@@ -94,10 +94,9 @@ end
   always_ff @(posedge CLK, negedge nRST) begin : IF_ID_LATCH
     if(!nRST) begin // add flush here
       if_id <= '0;
-    end
-    else if (if_flush && dpif.ihit)
+    end else if (if_flush && dpif.ihit) begin
       if_id <= '0;
-    else if (dpif.ihit) begin
+    end else if (dpif.ihit) begin
       if_id.instruction <= dpif.imemload;
       if_id.pc_add <= pc + 4;
       if_id.curr_pc <= pc;
@@ -136,14 +135,11 @@ assign cif.instruction = if_id.instruction;
         id_ex.branch_type <= cif.branch_type;
         id_ex.lui <= cif.lui;
         id_ex.wsel <= cif.wsel;
-    // end else if (dpif.dhit) begin
-    //   id_ex.rdat1 <= rfif.rdat1;
-    //   id_ex.rdat2 <= rfif.rdat2;
       end
   end
 
-assign portA = forwardA[1] ? ((ex_mem.memreg) ? ex_mem.dmemload : ex_mem.write_selected) : forwardA[0] ? ((mem_wb.memreg) ? mem_wb.dmemload : mem_wb.write_selected) : id_ex.rdat1;
-assign portB = forwardB[1] ? ((ex_mem.memreg) ? ex_mem.dmemload : ex_mem.write_selected) : forwardB[0] ? ((mem_wb.memreg) ? mem_wb.dmemload : mem_wb.write_selected) : id_ex.rdat2;
+assign portA = forwardA[1] ? (write_back) : forwardA[0] ? (mem_wb.write_back) : id_ex.rdat1;
+assign portB = forwardB[1] ? (write_back) : forwardB[0] ? (mem_wb.write_back) : id_ex.rdat2;
 assign aluif.rda = portA;
 assign aluif.rdb = (id_ex.alu_src) ? id_ex.imm_gen : portB;
 assign aluif.alu_op = id_ex.alu_op;
@@ -188,13 +184,8 @@ end
       ex_mem.memread <= 1'b0;
       ex_mem.dmemload <= dpif.dmemload;
     end 
-    // else if (ex_flush)
-    //   ex_mem <= '0;
     else if (dpif.ihit) begin
       ex_mem.write_selected <= write_selected; // this is put above
-      ex_mem.pc_add <= id_ex.pc_add;
-      ex_mem.curr_pc <= id_ex.curr_pc;
-      ex_mem.imm_gen <= id_ex.imm_gen; // NOT A CONTROL SIGNAL
       ex_mem.regwrite <= id_ex.regwrite; // determine whether or not we write into a register
       ex_mem.memwrite <= id_ex.memwrite; // determine whether or not we write into memory
       ex_mem.memread <= id_ex.memread; // determine whether or not we are reading from memory
@@ -211,7 +202,7 @@ assign dpif.dmemstore = ex_mem.dmemstore;
 assign dpif.dmemaddr = ex_mem.write_selected;
 assign dpif.dmemREN = ex_mem.memread;
 assign dpif.dmemWEN = ex_mem.memwrite;
-
+assign write_back = (ex_mem.memreg) ? ex_mem.dmemload : ex_mem.write_selected;
 
 
 
@@ -227,14 +218,13 @@ always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
     mem_wb.regwrite <= ex_mem.regwrite;
     mem_wb.halt <= ex_mem.halt;
     mem_wb.memreg <= ex_mem.memreg;
-    mem_wb.dmemload <= ex_mem.dmemload;
-    mem_wb.write_selected <= ex_mem.write_selected;
+    mem_wb.write_back <= write_back; 
   end
 end
  
 assign rfif.wsel = mem_wb.wsel;
 
-assign rfif.wdat = (mem_wb.memreg) ? mem_wb.dmemload : mem_wb.write_selected;
+assign rfif.wdat = mem_wb.write_back; 
 assign rfif.WEN =  mem_wb.regwrite;
 
 

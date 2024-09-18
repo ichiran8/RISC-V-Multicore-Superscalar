@@ -11,7 +11,7 @@ always_comb begin
     forwardA = 0;
     forwardB = 0;
     if ((mem_wb_regwrite && mem_wb_wsel)) begin
-         if (mem_wb_wsel == id_ex_rsel1) begin
+        if (mem_wb_wsel == id_ex_rsel1) begin
             forwardA = 2'd1;
         end
         if (mem_wb_wsel == id_ex_rsel2) begin

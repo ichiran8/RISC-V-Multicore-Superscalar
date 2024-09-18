@@ -28,7 +28,7 @@ assign cif.rsel1 = cif.instruction[19:15];
 assign cif.rsel2 = cif.instruction[24:20];
 assign cif.wsel = cif.instruction[11:7];
 always_comb begin
-    cif.imm_gen = 0; // NOT A CONTROL SIGNAL
+    cif.imm_gen = 0;//{{20{cif.instruction[31]}}, cif.instruction[31:20]}; // NOT A CONTROL SIGNAL
     cif.alu_src = 1'b0; // choosing whether or not we take a value to r2 or immediate
     // ^ another point of optimization; alu_src is either a don't care, or a 1 except for RTYPE which is 0 and BTYPE which is a 0
     cif.regwrite = 1; // determine whether or not we write into a register
@@ -45,7 +45,7 @@ always_comb begin
     casez(opcode)
         RTYPE : begin
             casez(funct3_r) 
-               ADD_SUB : cif.alu_op = (cif.instruction[30]) ? ALU_SUB : ALU_ADD;
+                ADD_SUB : cif.alu_op = (cif.instruction[30]) ? ALU_SUB : ALU_ADD;
                 SLL     : cif.alu_op = ALU_SLL;
                 SLT     : cif.alu_op = ALU_SLT;
                 SLTU    : cif.alu_op = ALU_SLTU;
