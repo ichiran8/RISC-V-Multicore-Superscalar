@@ -27,7 +27,7 @@ interface control_unit_if;
 
   //logic branch_bit;
   aluop_t alu_op;
-  logic alu_src, regwrite, memwrite, memread, memreg, jump, cauipc, halt, jalr, lui; //, zero;
+  logic alu_src, regwrite, memwrite, memread, memreg, jump, cauipc, halt, jalr, lui, zero;
   logic [1:0] branch_type;
 
 

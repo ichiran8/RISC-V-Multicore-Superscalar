@@ -23,8 +23,11 @@ module hazard_unit (
         if_flush = 0;
         id_flush = 0;
         ex_flush = 0;
-
-        if(branch | jump | halt) begin
+        if(jump | halt) begin
+            if_flush = 1;
+            id_flush = 1;
+        end
+        if(branch) begin
             if_flush = 1;
             id_flush = 1;
             ex_flush = 1;
