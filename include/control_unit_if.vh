@@ -33,12 +33,12 @@ interface control_unit_if;
 
   // register file ports
   modport cuif (
-    input   instruction, funct3_r, funct3_b, funct3_i, funct7_r, funct7_srla_r, //zero,
-    output  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, cauipc, halt, jalr, branch_type, lui
+    input   instruction, 
+    output  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, cauipc, halt, jalr, branch_type, lui, zero
   );
 
    modport tb (
-    input  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, cauipc, halt, jalr, branch_type, lui,
+    input  alu_op, alu_src, regwrite, memwrite, memread, memreg, jump, wsel, rsel1, rsel2, imm_gen, cauipc, halt, jalr, branch_type, lui, zero, 
     output instruction //, zero
   );
 

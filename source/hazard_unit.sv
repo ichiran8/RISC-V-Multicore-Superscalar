@@ -9,7 +9,6 @@ module hazard_unit (
     // input regbits_t if_id_rs2,
     // output logic PCWrite,
     // output logic if_id_write,
-    // output logic flush_id_ex,
     // we don't use top right now
 
     input logic branch,
@@ -20,25 +19,23 @@ module hazard_unit (
     output logic ex_flush
 );
     always_comb begin : BRANCH_JUMP_HAZARDING
-        if_flush = 0;
-        id_flush = 0;
-        ex_flush = 0;
-        if(jump | halt) begin
-            if_flush = 1;
-            id_flush = 1;
-        end
-        if(branch) begin
-            if_flush = 1;
-            id_flush = 1;
-            ex_flush = 1;
-        end
+        if_flush = jump | halt | branch;
+        id_flush = jump | halt | branch;
+        ex_flush = branch;
+        // PCWrite = 1;
+        // if_id_write = 1;
+        // if(id_ex_memread && (id_ex_rd == if_id_rs1 || id_ex_rd == if_id_rs2)) begin
+        //      PCWrite = 0;
+        //      if_id_write = 0;
+        //      id_flush = 1;
+        //  end
     end
 
     // ld hazard
     // always_comb begin : LD_HAZARDING
     //     PCWrite = 1;
-    //     if_id_write = 1;
-    //     flush_id_ex = 0;
+    //     if_id_write = 1; 
+    //     flush_id_ex = 0; <- id flush
 
     //     if(id_ex_memread && (id_ex_rd == if_id_rs1 || id_ex_rd == if_id_rs2)) begin
     //         PCWrite = 0;

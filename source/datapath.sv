@@ -26,7 +26,7 @@ module datapath (
   arithmetic_logic_if aluif ();
 
 word_t next_pc, pc, portA, portB, write_back;
-logic switch1, PCWrite, if_id_write, hazard_flush_id_ex; // we're going to have two flush signals for id_ex, so seperated names
+logic switch1, PCWrite, if_id_write; // we're going to have two flush signals for id_ex, so seperated names
 logic if_flush, id_flush, ex_flush, branch;
 logic [1:0] forwardA, forwardB;
 
@@ -39,7 +39,7 @@ logic [1:0] forwardA, forwardB;
   typedef struct packed {
     word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen;
     aluop_t alu_op;
-    logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2; 
+    logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2, zero; 
     regbits_t wsel, rsel1, rsel2;
     logic [1:0] branch_type;
   } id_ex_t;
@@ -47,7 +47,7 @@ logic [1:0] forwardA, forwardB;
   id_ex_t id_ex;
 
   typedef struct packed {
-    word_t write_selected, dmemstore, dmemload, imm_gen, result, curr_pc;
+    word_t write_selected, dmemstore, dmemload, imm_gen, curr_pc, portA, portB;
     logic regwrite, memwrite, memread, memreg, halt, zero; 
     logic [1:0] branch_type;
     regbits_t wsel;
@@ -72,7 +72,7 @@ alu alu(aluif);
 control_unit cu1(cif);
 forwarding_unit forward(.id_ex_rsel1(id_ex.rsel1), .id_ex_rsel2(id_ex.rsel2), .ex_mem_wsel(ex_mem.wsel), .mem_wb_wsel(mem_wb.wsel), .ex_mem_regwrite(ex_mem.regwrite), .mem_wb_regwrite(mem_wb.regwrite), .forwardA(forwardA), .forwardB(forwardB));
 //hazard_unit hazarding(.id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write), .flush_id_ex(hazard_flush_id_ex));
-hazard_unit hazarding(.branch(branch), .jump(id_ex.jump | id_ex.jalr), .halt(id_ex.halt), .if_flush(if_flush), .id_flush(id_flush), .ex_flush(ex_flush)); // check halt
+hazard_unit hazarding(.branch(branch), .jump(id_ex.jump | id_ex.jalr), .halt(id_ex.halt), .if_flush(if_flush), .id_flush(id_flush), .ex_flush(ex_flush)); //.id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write)); // check halt
     
 assign dpif.imemREN = 1'b1;
 assign dpif.imemaddr = pc;
@@ -95,7 +95,7 @@ end
   always_ff @(posedge CLK, negedge nRST) begin : IF_ID_LATCH
     if(!nRST) begin // add flush here
       if_id <= '0;
-    end else if (if_flush && dpif.ihit) begin
+    end else if (if_flush & dpif.ihit) begin
       if_id <= '0;
     end else if (dpif.ihit) begin
       if_id.instruction <= dpif.imemload;
@@ -130,14 +130,13 @@ assign cif.instruction = if_id.instruction;
         id_ex.memreg <= cif.memreg; 
         id_ex.alu_op <= cif.alu_op; 
         id_ex.jump <= cif.jump; 
-        //id_ex.auipc <= cif.cauipc; 
         id_ex.halt <= cif.halt;
         id_ex.jalr <= cif.jalr;
         id_ex.branch_type <= cif.branch_type;
-        //id_ex.lui <= cif.lui;
         id_ex.switch2 <= cif.lui | cif.cauipc;
         id_ex.wsel <= cif.wsel;
         id_ex.u_type <= (cif.cauipc) ? cif.imm_gen + if_id.curr_pc : cif.imm_gen;
+        id_ex.zero <= cif.zero;
         id_ex.switch1 <= cif.jalr | cif.jump;
       end
   end
@@ -153,8 +152,6 @@ always_comb begin
     2'b01 : portB = mem_wb.write_back;
   endcase
 end
-//assign portA = forwardA[1] ? (write_back) : forwardA[0] ? (mem_wb.write_back) : id_ex.rdat1;
-//assign portB = forwardB[1] ? (write_back) : forwardB[0] ? (mem_wb.write_back) : id_ex.rdat2;
 assign aluif.rda = portA;
 assign aluif.rdb = (id_ex.alu_src) ? id_ex.imm_gen : portB;
 assign aluif.alu_op = id_ex.alu_op;
@@ -162,10 +159,7 @@ assign aluif.alu_op = id_ex.alu_op;
 
 // can straight up do this here
 word_t write_selected;
-//assign switch1 = id_ex.jump | id_ex.jalr;
-//assign switch2 = id_ex.lui | id_ex.auipc;
 
-//assign write_selected = (id_ex.switch1) ? id_ex.pc_add : (id_ex.switch2) ? id_ex.u_type : aluif.result;
 always_comb begin
   write_selected = aluif.result;
   casez({id_ex.switch1, id_ex.switch2})
@@ -185,8 +179,6 @@ always_comb begin
       endcase
     end
 end
-
-//assign branch = (id_ex.branch_type[0] & (aluif.zero)) | (id_ex.branch_type[1] & !(aluif.zero));
 
 
 // TOTAL NUMBER OF LATCHED BITS : 191 (?)
@@ -219,10 +211,20 @@ end
       ex_mem.imm_gen <= id_ex.imm_gen;
       ex_mem.dmemstore <= portB;
       ex_mem.branch_type <= id_ex.branch_type;
-      ex_mem.zero <= aluif.zero;
+      ex_mem.zero <= id_ex.zero;
+      ex_mem.portA <= aluif.rda;
+      ex_mem.portB <= aluif.rdb;
     end
   end
-assign branch = (ex_mem.branch_type[0] & (ex_mem.zero)) | (ex_mem.branch_type[1] & !(ex_mem.zero));
+
+always_comb begin
+  branch = 1'b0;
+  casez(ex_mem.branch_type)
+    2'd1 : branch = !((ex_mem.portA == ex_mem.portB) ^ ex_mem.zero); //((ex_mem.portA ^ ex_mem.portB) == 0) : ((ex_mem.portA ^ ex_mem.portB) != 32'b0);
+    2'd2 : branch = !(($signed(ex_mem.portA) >= $signed(ex_mem.portB)) ^ ex_mem.zero);//(ex_mem.zero) ? !($signed(ex_mem.portA) < $signed(ex_mem.portB)) : (($signed(ex_mem.portA) < $signed(ex_mem.portB)));
+    2'd3 : branch = !(($unsigned(ex_mem.portA) >= $unsigned(ex_mem.portB)) ^ ex_mem.zero);//(ex_mem.zero) ? !(($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB))) : (($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB)));
+  endcase
+end
 assign dpif.dmemstore = ex_mem.dmemstore; 
 assign dpif.dmemaddr = ex_mem.write_selected;
 assign dpif.dmemREN = ex_mem.memread;

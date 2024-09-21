@@ -42,6 +42,7 @@ always_comb begin
     cif.jalr = 1'b0;
     cif.branch_type = 0;
     cif.lui = 1'b0;
+    cif.zero = 1'b0;
     casez(opcode)
         RTYPE : begin
             casez(funct3_r) 
@@ -94,28 +95,34 @@ always_comb begin
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[7], cif.instruction[30:25], cif.instruction[11:8], 1'b0};
             casez(funct3_b) 
                 BEQ : begin
-                    cif.alu_op = ALU_XOR;
+                    //cif.alu_op = ALU_XOR;
                     cif.branch_type = 2'd1;
+                    cif.zero = 1'b1;
                 end
                 BNE : begin
-                    cif.alu_op = ALU_XOR;
-                    cif.branch_type = 2'd2;
+                    //cif.alu_op = ALU_XOR;
+                    cif.branch_type = 2'd1;
+                    //cif.zero = 1'b1;
                 end
                 BLT : begin 
-                    cif.alu_op = ALU_SLT;
+                    //cif.alu_op = ALU_SLT;
                     cif.branch_type = 2'd2;
+                    //cif.zero = 1'b1;
                 end
                 BGE : begin
-                     cif.alu_op = ALU_SLT;
-                     cif.branch_type = 2'd1;
+                     //cif.alu_op = ALU_SLT;
+                     cif.branch_type = 2'd2;
+                     cif.zero = 1'b1;
                 end
                 BLTU : begin
-                     cif.alu_op = ALU_SLTU;
-                     cif.branch_type = 2'd2;
+                     //cif.alu_op = ALU_SLTU;
+                     cif.branch_type = 2'd3;
+                     //cif.zero = 1'b1;
                 end
                 BGEU : begin
-                    cif.alu_op = ALU_SLTU;
-                    cif.branch_type = 2'd1;
+                    //cif.alu_op = ALU_SLTU;
+                    cif.branch_type = 2'd3;
+                    cif.zero = 1'b1;
                 end
             endcase
         end
