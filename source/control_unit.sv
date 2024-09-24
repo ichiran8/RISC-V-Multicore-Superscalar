@@ -8,13 +8,13 @@ module control_unit(
 );
 funct3_r_t funct3_r;
 funct3_b_t funct3_b;
+//logic [2:0] funct3_b;
 funct3_i_t funct3_i;
 funct7_r_t funct7_r;
 funct7_srla_r_t funct7_srla_r;
 
 assign funct3_r = funct3_r_t'(cif.instruction[14:12]);
 assign funct7_r = funct7_r_t'(cif.instruction[31:25]);
-assign funct7_srla_r = funct7_srla_r_t'(cif.instruction[31:25]);
 assign funct3_i = funct3_i_t'(cif.instruction[14:12]);
 
 assign funct3_b = funct3_b_t'(cif.instruction[14:12]);
@@ -30,7 +30,6 @@ assign cif.wsel = cif.instruction[11:7];
 always_comb begin
     cif.imm_gen = 0;//{{20{cif.instruction[31]}}, cif.instruction[31:20]}; // NOT A CONTROL SIGNAL
     cif.alu_src = 1'b0; // choosing whether or not we take a value to r2 or immediate
-    // ^ another point of optimization; alu_src is either a don't care, or a 1 except for RTYPE which is 0 and BTYPE which is a 0
     cif.regwrite = 1; // determine whether or not we write into a register
     cif.memwrite = 0; // determine whether or not we write into memory
     cif.memread = 0; // determine whether or not we are reading from memory

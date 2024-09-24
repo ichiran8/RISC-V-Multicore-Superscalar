@@ -7,6 +7,7 @@ module forwarding_unit (
     output logic [1:0] forwardA, forwardB
 );
 
+
 always_comb begin
     forwardA = 0;
     forwardB = 0;

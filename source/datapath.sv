@@ -37,7 +37,7 @@ logic [1:0] forwardA, forwardB;
   if_id_t if_id;
 
   typedef struct packed {
-    word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen;
+    word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen, jump_target;
     aluop_t alu_op;
     logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2, zero; 
     regbits_t wsel, rsel1, rsel2;
@@ -109,7 +109,7 @@ assign cif.instruction = if_id.instruction;
 
 //********************* START OF INSTRUCTION DECODE : EXECUTE (ID/EX) LATCH ********************* //
 
-  always_ff @(posedge CLK, negedge nRST) begin : ID_EX_LATCH
+  always_ff @(posedge CLK, negedge nRST) begin : ID_EX_LATCH 
     if(!nRST) begin
       id_ex <= '0;
     end 
@@ -137,6 +137,7 @@ assign cif.instruction = if_id.instruction;
         id_ex.wsel <= cif.wsel;
         id_ex.u_type <= (cif.cauipc) ? cif.imm_gen + if_id.curr_pc : cif.imm_gen;
         id_ex.zero <= cif.zero;
+        id_ex.jump_target <= if_id.curr_pc + cif.imm_gen;
         id_ex.switch1 <= cif.jalr | cif.jump;
       end
   end
@@ -162,7 +163,7 @@ word_t write_selected;
 
 always_comb begin
   write_selected = aluif.result;
-  casez({id_ex.switch1, id_ex.switch2})
+  casez({{id_ex.switch1}, id_ex.switch2})
     2'b10 : write_selected = id_ex.pc_add;
     2'b01 : write_selected = id_ex.u_type;
   endcase
@@ -171,10 +172,10 @@ end
 always_comb begin
     next_pc = pc + 4; // Don't know if I need this here tbh (no you don't)
     if(branch) begin
-      next_pc = ex_mem.curr_pc + ex_mem.imm_gen;
+      next_pc = ex_mem.curr_pc + ex_mem.imm_gen; // this is calculated in the mem  stage
     end else begin
       casez({id_ex.jump, id_ex.jalr})      
-          2'b10 : next_pc = id_ex.curr_pc + id_ex.imm_gen; // this will be wrong
+          2'b10 : next_pc = id_ex.jump_target; // this is calculated in the execute stage
           2'b01 : next_pc = aluif.result;
       endcase
     end
@@ -188,7 +189,7 @@ end
 
 
 
-  always_ff @(posedge CLK, negedge nRST) begin : EX_MEM_LATCH
+  always_ff @(posedge CLK, negedge nRST) begin : EX_MEM_LATCH  
     if(!nRST) begin
       ex_mem <= '0;
     end else if (ex_flush && dpif.ihit)begin
@@ -225,11 +226,12 @@ always_comb begin
     2'd3 : branch = !(($unsigned(ex_mem.portA) >= $unsigned(ex_mem.portB)) ^ ex_mem.zero);//(ex_mem.zero) ? !(($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB))) : (($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB)));
   endcase
 end
+
 assign dpif.dmemstore = ex_mem.dmemstore; 
-assign dpif.dmemaddr = ex_mem.write_selected;
-assign dpif.dmemREN = ex_mem.memread;
-assign dpif.dmemWEN = ex_mem.memwrite;
-assign write_back = (ex_mem.memreg) ? ex_mem.dmemload : ex_mem.write_selected;
+assign dpif.dmemaddr  = ex_mem.write_selected;
+assign dpif.dmemREN   = ex_mem.memread;
+assign dpif.dmemWEN   = ex_mem.memwrite;
+assign write_back     = (ex_mem.memreg) ? ex_mem.dmemload : ex_mem.write_selected;
 
 
 
@@ -254,7 +256,7 @@ end
 assign rfif.wsel = mem_wb.wsel;
 
 assign rfif.wdat = mem_wb.write_back; 
-assign rfif.WEN =  mem_wb.regwrite;
+assign rfif.WEN  = mem_wb.regwrite;
 
 
 always_ff @(posedge CLK, negedge nRST) begin
