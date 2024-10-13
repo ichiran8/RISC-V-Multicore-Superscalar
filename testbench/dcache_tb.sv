@@ -258,7 +258,7 @@ initial begin
 
   dpif.halt = 1;
 
-  #(32 * PERIOD);
+  #(68 * PERIOD);
 
 	// to put some gap
   #(2 * PERIOD);

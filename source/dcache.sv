@@ -60,8 +60,8 @@ always_comb begin : NEXT_STATE_LOGIC
         update2: next_state = !ccif.dwait ? access1 : state;
         access1: next_state = (!ccif.dwait & dpif.dmemWEN) ? request : !ccif.dwait ? access2 : state;
         access2: next_state = !ccif.dwait ? request : state;
-        flush1: next_state = (!ccif.dwait | !ccif.dWEN) ? flush2 : state; // flush first word
-        flush2: next_state = flush_timer == 4'd15 ? write_hits : (!ccif.dwait | !ccif.dWEN) ? flush1 : state; // flush second word
+        flush1: next_state = (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush2 : state; // flush first word
+        flush2: next_state = flush_timer == 4'd15 ? write_hits : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush1 : state; // flush second word
         write_hits: next_state = !ccif.dwait ? terminate : state;
         // terminate: stay in terminate, i think
     endcase
@@ -173,16 +173,16 @@ always_comb begin : OUTPUT_LOGIC
         end
         flush1: begin
             if(frame[flush_timer[2:0]][flush_timer[3]].dirty) begin
-                // ccif.dWEN = 1;
-                // ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[0];
-                // ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b0, 2'b00};
+                ccif.dWEN = 1;
+                ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[0];
+                ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b0, 2'b00};
             end
         end
         flush2: begin
             if(frame[flush_timer[2:0]][flush_timer[3]].dirty) begin
-                // ccif.dWEN = 1;
-                // ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[0];
-                // ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b1, 2'b00};
+                ccif.dWEN = 1;
+                ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[1];
+                ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b1, 2'b00};
                 // next_frame = frame[i][j].dirty = 0; // clean up
             end
             next_flush_timer = flush_timer + 1;
