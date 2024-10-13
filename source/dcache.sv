@@ -19,7 +19,7 @@ assign req.idx = dpif.dmemaddr[5:3]; // 3 bits
 assign req.tag = dpif.dmemaddr[31:6]; // 26 bits
 
 logic[1:0] frame_select; // 10 = hit frame2, 01 = hit frame1, 00 = no match
-assign frame_select = (frame[req.idx][0].tag == req.tag & frame[req.idx][0].valid) ? 2'd2 : (frame2[req.idx].tag == req.tag & frame2[req.idx].valid) ? 2'd1 : 2'd0;
+assign frame_select = (frame[req.idx][1].tag == req.tag & frame[req.idx][1].valid) ? 2'd2 : (frame[req.idx][0].tag == req.tag & frame[req.idx][0].valid) ? 2'd1 : 2'd0;
 // we always check, maybe better to include dpif.dmemREN | dpif.dmemWEN
 
 dcache_frame [7:0][1:0] frame; // eight sets of two frames
@@ -67,7 +67,7 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         hit_counter <= '0;
     end
     else begin
-		frame <= next_frame;
+        frame <= next_frame;
         lru <= next_lru;
         state <= next_state;
         hit_counter <= next_hit_counter;
@@ -91,24 +91,25 @@ always_comb begin : OUTPUT_LOGIC
 
     // Internal
     next_lru = lru;
-	next_frame = frame;
+    next_frame = frame;
+    next_hit_counter = hit_counter;
 
     case (state)
         request: begin
             if(dpif.dmemREN | dpif.dmemWEN) begin
                 if(frame_select != 2'd0) begin // if not 0, then check bit 1
-                	dpif.dhit = 1;
-                    next_hit_counter = hit_counter + 1;
+                    dpif.dhit = 1;
+                    next_hit_counter = hit_counter + 1; // might have issues with timing, currently double counting??
 
                     next_lru[req.idx] = frame_select[0]; // frame1 not used if 0, frame2 not used if 1
 
                     if(dpif.dmemREN) begin
                         dpif.dmemload = frame[req.idx][frame_select[1]].data[req.blkoff];
                     end
-                    else if(dpif.dpif.dmemWEN) begin
+                    else if(dpif.dmemWEN) begin
                         next_frame[req.idx][frame_select[1]].data[req.blkoff] = dpif.dmemstore; // idk if next_frame will affect speed
-						next_frame[req.idx][frame_select[1]].dirty = 1;
-						next_frame[req.idx][frame_select[1]].valid = 1;
+                        next_frame[req.idx][frame_select[1]].dirty = 1;
+                        next_frame[req.idx][frame_select[1]].valid = 1;
                     end
                 end
             end
@@ -116,32 +117,40 @@ always_comb begin : OUTPUT_LOGIC
         update1: begin
             ccif.dWEN = 1; // no way to know if victim block is written, so need both updates
             ccif.dstore = frame[req.idx][frame_select[1]].data[req.blkoff]; // write the data you have first
-            ccif.daddr = {req.tag, req.tag, req.blkoff, req.bytoff}; // check this
+            ccif.daddr = {req.tag, req.idx, req.blkoff, req.bytoff}; // check this
         end
         update2: begin
             ccif.dWEN = 1;
             ccif.dstore = frame[req.idx][frame_select[1]].data[!req.blkoff];
-            ccif.daddr = {req.tag, req.tag, !req.blkoff, req.bytoff}; // check this
+            ccif.daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // check this
         end
         access1: begin
             ccif.dREN = 1;
-            ccif.daddr = {req.tag, req.tag, !req.blkoff, req.bytoff}; // get the data you don't have first
+            ccif.daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
 
             if(dpif.dmemWEN & next_state == request) begin
                next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
                next_frame[req.idx][lru[req.idx]].data[req.blkoff] = dpif.dmemstore;
-               dpif.dhit = 1;
+               next_frame[req.idx][lru[req.idx]].valid = 1;
+               next_frame[req.idx][lru[req.idx]].dirty = 1;
+			   next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
+
+               next_hit_counter = hit_counter - 1;
             end
             else if(next_state == access2)
                next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
         end
         access2: begin
             ccif.dREN = 1;
-            ccif.daddr = {req.tag, req.tag, req.blkoff, req.bytoff};
+            ccif.daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
 
-            if(dpif.dmemWEN & next_state == request) begin
+            if(next_state == request) begin
                next_frame[req.idx][lru[req.idx]].data[req.blkoff] = ccif.dload;
-               dpif.dhit = 1;
+               next_frame[req.idx][lru[req.idx]].valid = 1;
+            	next_frame[req.idx][lru[req.idx]].dirty = 0; // if we got here, we should only be doing a read
+			   	next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
+
+               next_hit_counter = hit_counter - 1;
             end
         end
         flush: begin
