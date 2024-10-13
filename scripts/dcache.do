@@ -9,13 +9,15 @@ add wave -noupdate -divider DUT
 add wave -noupdate -expand -group DCACHE /dcache_tb/DUT/req
 add wave -noupdate -expand -group DCACHE /dcache_tb/DUT/frame_select
 add wave -noupdate -expand -group DCACHE /dcache_tb/DUT/frame
-add wave -noupdate -expand -group DCACHE -subitemconfig {{/dcache_tb/DUT/next_frame[1]} -expand {/dcache_tb/DUT/next_frame[1][0]} -expand} /dcache_tb/DUT/next_frame
+add wave -noupdate -expand -group DCACHE /dcache_tb/DUT/next_frame
 add wave -noupdate -expand -group DCACHE /dcache_tb/DUT/lru
 add wave -noupdate -expand -group DCACHE /dcache_tb/DUT/next_lru
 add wave -noupdate -expand -group DCACHE -radix decimal /dcache_tb/DUT/hit_counter
 add wave -noupdate -expand -group DCACHE -radix decimal /dcache_tb/DUT/next_hit_counter
 add wave -noupdate -expand -group DCACHE /dcache_tb/DUT/state
 add wave -noupdate -expand -group DCACHE /dcache_tb/DUT/next_state
+add wave -noupdate -expand -group DCACHE /dcache_tb/DUT/flush_timer
+add wave -noupdate -expand -group DCACHE /dcache_tb/DUT/dirty_bits
 add wave -noupdate -expand -group {DATAPATH SIGNALS} /dcache_tb/DUT/dpif/halt
 add wave -noupdate -expand -group {DATAPATH SIGNALS} /dcache_tb/DUT/dpif/dhit
 add wave -noupdate -expand -group {DATAPATH SIGNALS} /dcache_tb/DUT/dpif/dmemREN
@@ -60,8 +62,9 @@ add wave -noupdate -group ramif /dcache_tb/RAM/ramif/memREN
 add wave -noupdate -group ramif /dcache_tb/RAM/ramif/memWEN
 add wave -noupdate -group ramif /dcache_tb/RAM/ramif/memaddr
 add wave -noupdate -group ramif /dcache_tb/RAM/ramif/memstore
+add wave -noupdate /dcache_tb/DUT/prev_dhit
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {113912 ps} 0}
+WaveRestoreCursors {{Cursor 1} {339663 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 150
 configure wave -valuecolwidth 100
@@ -77,4 +80,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {55263 ps} {165513 ps}
+WaveRestoreZoom {240575 ps} {484324 ps}

@@ -18,13 +18,13 @@ module caches (
   dcache  DCACHE(CLK, nRST, dcif, cif);
 
   // dcache invalidate before halt handled by dcache when exists
-  assign dcif.flushed = dcif.halt;
+  // assign dcif.flushed = dcif.halt;
 
   //singlecycle
-  assign dcif.ihit = (dcif.imemREN) ? ~cif.iwait : 0;
-  assign dcif.dhit = (dcif.dmemREN|dcif.dmemWEN) ? ~cif.dwait : 0;
-  assign dcif.imemload = cif.iload;
-  assign dcif.dmemload = cif.dload;
+  // assign dcif.ihit = (dcif.imemREN) ? ~cif.iwait : 0;
+  // assign dcif.dhit = (dcif.dmemREN|dcif.dmemWEN) ? ~cif.dwait : 0;
+  // assign dcif.imemload = cif.iload;
+  // assign dcif.dmemload = cif.dload;
 
 
   assign cif.iREN = dcif.imemREN;

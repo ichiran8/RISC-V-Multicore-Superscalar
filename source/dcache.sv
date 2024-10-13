@@ -31,7 +31,13 @@ logic [7:0] next_lru;
 logic [31:0] hit_counter;
 logic [31:0] next_hit_counter;
 
-typedef enum bit [7:0] {request, access1, access2, update1, update2, flush, write_hits, terminate} stateType;
+logic prev_dhit;
+logic[7:0][1:0] dirty_bits;
+
+logic[3:0] flush_timer;
+logic[3:0] next_flush_timer;
+
+typedef enum bit [8:0] {request, access1, access2, update1, update2, flush1, flush2, write_hits, terminate} stateType;
 
 stateType state;
 stateType next_state;
@@ -42,18 +48,20 @@ always_comb begin : NEXT_STATE_LOGIC
     case (state)
         request: begin
             if(dpif.halt)
-                next_state = flush;
-            else if((dpif.dmemREN | dpif.dmemWEN) & frame_select == 2'd0)
+                next_state = flush1;
+            else if((dpif.dmemREN | dpif.dmemWEN) && frame_select == 2'd0) begin
                 if(!frame[req.idx][lru[req.idx]].dirty) // clean
                     next_state = access1;
                 if(frame[req.idx][lru[req.idx]].dirty) // dirty
                     next_state = update1;
+            end
         end
         update1: next_state = !ccif.dwait ? update2 : state;
         update2: next_state = !ccif.dwait ? access1 : state;
         access1: next_state = (!ccif.dwait & dpif.dmemWEN) ? request : !ccif.dwait ? access2 : state;
         access2: next_state = !ccif.dwait ? request : state;
-        // flush: next_state = no dirty bits left
+        flush1: next_state = (!ccif.dwait | !ccif.dWEN) ? flush2 : state; // flush first word
+        flush2: next_state = flush_timer == 4'd15 ? write_hits : (!ccif.dwait | !ccif.dWEN) ? flush1 : state; // flush second word
         write_hits: next_state = !ccif.dwait ? terminate : state;
         // terminate: stay in terminate, i think
     endcase
@@ -65,17 +73,18 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         lru <= '0;
         state <= request;
         hit_counter <= '0;
+        prev_dhit <= 0;
+        flush_timer <= '0;
     end
     else begin
         frame <= next_frame;
         lru <= next_lru;
         state <= next_state;
         hit_counter <= next_hit_counter;
+        prev_dhit <= dpif.dhit; // prev_dhit needed for solving double counting
+        flush_timer <= next_flush_timer;
     end
 end
-
-
-logic[15:0] dirty_bits;
 
 always_comb begin : OUTPUT_LOGIC
     // To Controller
@@ -93,13 +102,20 @@ always_comb begin : OUTPUT_LOGIC
     next_lru = lru;
     next_frame = frame;
     next_hit_counter = hit_counter;
+    next_flush_timer = flush_timer;
+
+    // for(int i = 0; i < 8; i++) begin
+    //     for(int j = 0; j < 2; j++) begin
+    //         dirty_bits[i][j] = frame[i][j].dirty;
+    //     end
+    // end
 
     case (state)
         request: begin
             if(dpif.dmemREN | dpif.dmemWEN) begin
-                if(frame_select != 2'd0) begin // if not 0, then check bit 1
+                if(!prev_dhit & frame_select != 2'd0) begin // if not 0, then check bit 1
                     dpif.dhit = 1;
-                    next_hit_counter = hit_counter + 1; // might have issues with timing, currently double counting??
+                    next_hit_counter = hit_counter + 1;
 
                     next_lru[req.idx] = frame_select[0]; // frame1 not used if 0, frame2 not used if 1
 
@@ -131,6 +147,7 @@ always_comb begin : OUTPUT_LOGIC
             if(dpif.dmemWEN & next_state == request) begin
                next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
                next_frame[req.idx][lru[req.idx]].data[req.blkoff] = dpif.dmemstore;
+               next_frame[req.idx][lru[req.idx]].tag = req.tag;
                next_frame[req.idx][lru[req.idx]].valid = 1;
                next_frame[req.idx][lru[req.idx]].dirty = 1;
 			   next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
@@ -146,17 +163,29 @@ always_comb begin : OUTPUT_LOGIC
 
             if(next_state == request) begin
                next_frame[req.idx][lru[req.idx]].data[req.blkoff] = ccif.dload;
+               next_frame[req.idx][lru[req.idx]].tag = req.tag;
                next_frame[req.idx][lru[req.idx]].valid = 1;
-            	next_frame[req.idx][lru[req.idx]].dirty = 0; // if we got here, we should only be doing a read
-			   	next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
+               next_frame[req.idx][lru[req.idx]].dirty = 0; // if we got here, we should only be doing a read
+               next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
 
                next_hit_counter = hit_counter - 1;
             end
         end
-        flush: begin
-
-
-            // if(dirty_bits == 0)
+        flush1: begin
+            if(frame[flush_timer[2:0]][flush_timer[3]].dirty) begin
+                // ccif.dWEN = 1;
+                // ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[0];
+                // ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b0, 2'b00};
+            end
+        end
+        flush2: begin
+            if(frame[flush_timer[2:0]][flush_timer[3]].dirty) begin
+                // ccif.dWEN = 1;
+                // ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[0];
+                // ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b1, 2'b00};
+                // next_frame = frame[i][j].dirty = 0; // clean up
+            end
+            next_flush_timer = flush_timer + 1;
         end
         write_hits: begin
             ccif.dWEN = 1;

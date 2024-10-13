@@ -184,7 +184,7 @@ initial begin
   // case 0: 
   reset_dut();
   tb_test_num               += 1;
-  tb_test_case              = "Write data";
+  tb_test_case              = "Write data (miss)";
 
   dpif.dmemWEN = 1;
   dpif.dmemstore = 32'b1;
@@ -231,6 +231,34 @@ initial begin
   dpif.dmemREN = 0;
   dpif.dmemstore = '0;
   dpif.dmemaddr = '0;
+
+	// to put some gap
+  #(2 * PERIOD);
+
+  tb_test_num               += 1;
+  tb_test_case              = "Write data to frame2, when frame1 exists in same index (miss)";
+
+  dpif.dmemWEN = 1;
+  dpif.dmemstore = 32'd5;
+  dpif.dmemaddr = 32'b1001100;
+
+  @(posedge CPUCLK);
+  @(posedge CPUCLK);
+  @(posedge CPUCLK);
+
+  dpif.dmemWEN = 0;
+  dpif.dmemstore = '0;
+  dpif.dmemaddr = '0;
+
+	// to put some gap
+  #(2 * PERIOD);
+
+  tb_test_num               += 1;
+  tb_test_case              = "Halt and write hits";
+
+  dpif.halt = 1;
+
+  #(32 * PERIOD);
 
 	// to put some gap
   #(2 * PERIOD);
