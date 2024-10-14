@@ -17,10 +17,9 @@ module icache(
     typedef enum logic {IDLE, MEM} state_t;
 
     state_t state, next_state;
-    logic imiss;
     icachef_t icheck;
     
-    assign icheck.tag = dpif.imemaddr[31:5];
+    assign icheck.tag = dpif.imemaddr[31:6];
     assign icheck.idx = dpif.imemaddr[5:2];
     assign icheck.bytoff = dpif.imemaddr[1:0];
     // we fetch from the main memory when we get a memory miss

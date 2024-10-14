@@ -13,7 +13,7 @@ module caches (
 );
 
   // icache
-  //icache  ICACHE(dcif, cif);
+  icache  ICACHE(CLK, nRST, dcif, cif);
   // dcache
   dcache  DCACHE(CLK, nRST, dcif, cif);
 

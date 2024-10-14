@@ -135,8 +135,11 @@ initial begin
   // case 0 : INIT
   tb_test_num               = 0;
   tb_test_case              = "Reset DUT";
-
-	
+	cif0.daddr = '0;
+	cif0.dREN = 0;
+	cif0.dWEN = 0;
+	cif0.iREN = 0;
+	cif0.iaddr = 0;
     dpif.halt = 0;
     dpif.dmemREN = 0;
     dpif.dmemWEN = 0;
@@ -155,31 +158,39 @@ initial begin
   tb_test_case              = "Read Data miss";
 
 for(i = 0; i < 16; i = i + 1) begin 
-    dpif.imemaddr += 4'b0100;
     @(posedge dpif.ihit);
     @(posedge CLK);
 	@(posedge CLK);
+	dpif.imemaddr += 4'b0100;
 end
 
 	// to put some gap
+	dpif.imemREN = 0;
+	dpif.imemaddr = 0;
+	i = 0;
   #(2 * PERIOD);
 
   // case 2: 
   tb_test_num               += 1;
   tb_test_case              = "Read hit";
 
+	dpif.imemREN = 1'b1;
   dpif.imemaddr = 0;
+  #(PERIOD * 2);
+	@(posedge CLK);
 for(i = 0; i < 16; i = i +1) begin 
-    dpif.imemaddr += 4'b0100;
-    @(posedge dpif.ihit);
+    //@(posedge dpif.ihit);
     @(posedge CLK);
 	@(posedge CLK);
+	dpif.imemaddr += 4'b0100;
 end
 
 	
     @(negedge CLK);
     dpif.imemREN = 1'b0;
     
+	@(negedge CLK);
+	dump_memory();
   $stop();  
 end
 
