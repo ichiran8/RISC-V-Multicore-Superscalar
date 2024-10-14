@@ -177,7 +177,7 @@ for(i = 0; i < 16; i = i +1) begin
 end
 
 	
-    @(negedge CPUCLK);
+    @(negedge CLK);
     dpif.imemREN = 1'b0;
     
   $stop();  
