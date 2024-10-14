@@ -104,12 +104,6 @@ always_comb begin : OUTPUT_LOGIC
     next_hit_counter = hit_counter;
     next_flush_timer = flush_timer;
 
-    // for(int i = 0; i < 8; i++) begin
-    //     for(int j = 0; j < 2; j++) begin
-    //         dirty_bits[i][j] = frame[i][j].dirty;
-    //     end
-    // end
-
     case (state)
         request: begin
             if(dpif.dmemREN | dpif.dmemWEN) begin
@@ -183,9 +177,9 @@ always_comb begin : OUTPUT_LOGIC
                 ccif.dWEN = 1;
                 ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[1];
                 ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b1, 2'b00};
-                // next_frame = frame[i][j].dirty = 0; // clean up
             end
-            next_flush_timer = flush_timer + 1;
+            if(next_state == flush1)
+                next_flush_timer = flush_timer + 1;
         end
         write_hits: begin
             ccif.dWEN = 1;

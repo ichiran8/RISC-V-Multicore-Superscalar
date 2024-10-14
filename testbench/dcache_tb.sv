@@ -242,8 +242,7 @@ initial begin
   dpif.dmemstore = 32'd5;
   dpif.dmemaddr = 32'b1001100;
 
-  @(posedge CPUCLK);
-  @(posedge CPUCLK);
+  @(posedge dpif.dhit);
   @(posedge CPUCLK);
 
   dpif.dmemWEN = 0;
@@ -260,11 +259,7 @@ initial begin
   dpif.dmemstore = 32'd9;
   dpif.dmemaddr = 32'b100001100;
 
-  @(posedge CPUCLK);
-  @(posedge CPUCLK);
-  @(posedge CPUCLK);
-  @(posedge CPUCLK);
-  @(posedge CPUCLK);
+  @(posedge dpif.dhit);
   @(posedge CPUCLK);
 
   dpif.dmemWEN = 0;
@@ -283,44 +278,6 @@ initial begin
 
 	// to put some gap
   #(2 * PERIOD);
-
-  // cif0.dWEN = 1;
-  // cif0.iREN = 1;
-  // cif0.dstore = 32'b1;
-  // cif0.daddr = 32'b100;
-
-  // #(2 * PERIOD);
-
-  // cif0.dREN = 0;
-  // cif0.dWEN = 0;
-
-  // cif0.dstore = '0;
-  // cif0.iaddr = '0;
-  // cif0.daddr = '0;
-
-  // #(2 * PERIOD);
-
-  // // case 1: 
-  // tb_test_num               += 1;
-  // tb_test_case              = "Read data";
-
-  // cif0.iREN = 1;
-  // cif0.dREN = 1;
-  // cif0.daddr = 32'b100;
-
-  // #(2 * PERIOD);
-
-  // cif0.iREN = 0;
-  // cif0.dREN = 0;
-  // cif0.dWEN = 0;
-
-  // cif0.dstore = '0;
-  // cif0.iaddr = '0;
-  // cif0.daddr = '0;
-
-  // dump_memory();
-
-  // #(10 * PERIOD);
 
   $stop();  
 end
