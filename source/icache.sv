@@ -6,26 +6,26 @@ import cpu_types_pkg::*;
 
 module icache(
     input logic CLK, nRST,
-    datapath_cache_if.icache caif,
-    caches_if.icache c_icache
+    datapath_cache_if.icache dpif,
+    caches_if.icache caif
 );
 
 
 
-    icache_frame [15:0] cache, next_cache;
+    icache_frame [15:0] cache;
+    icache_frame [15:0] next_cache;
     typedef enum logic {IDLE, MEM} state_t;
 
     state_t state, next_state;
     logic imiss;
-    logic [ITAG_W-1:0]  tag;
-    logic [IIDX_W-1:0]  idx;
-    logic [IBYT_W-1:0]  bytoff;
-    icache_f icheck;
+    icachef_t icheck;
     
-    assign icheck.tag = caif.imemaddr[31:5];
-    assign icheck.idx = caif.imemaddr[5:2];
-    assign icheck.byteoff = caif.imemaddr[1:0];
+    assign icheck.tag = dpif.imemaddr[31:5];
+    assign icheck.idx = dpif.imemaddr[5:2];
+    assign icheck.bytoff = dpif.imemaddr[1:0];
     // we fetch from the main memory when we get a memory miss
+    logic next_iREN;
+    word_t next_iaddr;
 
     always_ff @(posedge CLK, negedge nRST) begin
         if(!nRST) begin
@@ -34,32 +34,31 @@ module icache(
         end else begin
             state <= next_state;
             cache <= next_cache;
+            caif.iREN <= next_iREN;
+            caif.iaddr <= next_iaddr;
         end
-        else if (halt)
-            cache.valid = '0;
     end
 
 
     always_comb begin // state machine
         next_state = state;
         next_cache = cache;
-        c_icache.iREN = 1'b0;
-        c_icache.iaddr = 0;
-        case(state)
+        next_iaddr = caif.iaddr;
+        next_iREN = caif.iREN;
+        casez(state)
             IDLE : begin
-                 if (dpif.imemREN && !caif.ihit) begin
+                 if (dpif.imemREN && !dpif.ihit) begin
                     next_state = MEM;
-                    //c_icache.IREN = 1'b1;
-                    //c_icache.iaddr = caif.imemaddr;
+                    next_iREN = 1'b1;  // if we were to register iREN and imemaddr, we would need to do this
+                    next_iaddr = dpif.imemaddr;
                  end
             
             end
             MEM : begin
-                c_icache.iREN = 1'b1;
-                c_icache.iaddr = caif.imemaddr;
                 if (!caif.iwait) begin
                     next_state = IDLE;
-                    next_cache[icheck.idx] = {1'b1, icheck.tag, c_icache.iload};
+                    next_cache[icheck.idx] = {1'b1, icheck.tag, caif.iload};
+                    next_iREN = 1'b0;
                 end
             end
         endcase
@@ -67,6 +66,6 @@ module icache(
 
     // tag width is 26 bits 
     // index is pc [5:2]
-    assign caif.ihit = (dpif.imemREN && cache[icheck.idx].valid && cache[icheck.idx].tag == icheck.tag); // if there is a valid bit
-    assign caif.imemload = cache[idx].data;
+    assign dpif.ihit = (dpif.imemREN && cache[icheck.idx].valid && (cache[icheck.idx].tag == icheck.tag)); // if there is a valid bit
+    assign dpif.imemload = cache[icheck.idx].data;
 endmodule
