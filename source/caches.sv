@@ -27,11 +27,11 @@ module caches (
   // assign dcif.dmemload = cif.dload;
 
 
-  assign cif.iREN = dcif.imemREN;
-  assign cif.dREN = dcif.dmemREN;
-  assign cif.dWEN = dcif.dmemWEN;
-  assign cif.dstore = dcif.dmemstore;
-  assign cif.iaddr = dcif.imemaddr;
-  assign cif.daddr = dcif.dmemaddr;
+  // assign cif.iREN = dcif.imemREN;
+  // assign cif.dREN = dcif.dmemREN;
+  // assign cif.dWEN = dcif.dmemWEN;
+  // assign cif.dstore = dcif.dmemstore;
+  // assign cif.iaddr = dcif.imemaddr;
+  // assign cif.daddr = dcif.dmemaddr;
 
 endmodule

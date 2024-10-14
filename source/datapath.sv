@@ -74,7 +74,7 @@ forwarding_unit forward(.id_ex_rsel1(id_ex.rsel1), .id_ex_rsel2(id_ex.rsel2), .e
 //hazard_unit hazarding(.id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write), .flush_id_ex(hazard_flush_id_ex));
 hazard_unit hazarding(.branch(branch), .jump(id_ex.jump | id_ex.jalr), .halt(id_ex.halt), .if_flush(if_flush), .id_flush(id_flush), .ex_flush(ex_flush)); //.id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write)); // check halt
     
-assign dpif.imemREN = 1'b1;
+assign dpif.imemREN = !(dpif.dmemREN | dpif.dmemWEN);
 assign dpif.imemaddr = pc;
 assign rfif.rsel1 = dpif.dhit ? id_ex.rsel1 : cif.rsel1;
 assign rfif.rsel2 = dpif.dhit ? id_ex.rsel2 : cif.rsel2;
