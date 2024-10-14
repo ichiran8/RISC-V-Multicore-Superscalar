@@ -254,6 +254,27 @@ initial begin
   #(2 * PERIOD);
 
   tb_test_num               += 1;
+  tb_test_case              = "Write data to index where both frames are filled, evict lru frame1";
+
+  dpif.dmemWEN = 1;
+  dpif.dmemstore = 32'd9;
+  dpif.dmemaddr = 32'b100001100;
+
+  @(posedge CPUCLK);
+  @(posedge CPUCLK);
+  @(posedge CPUCLK);
+  @(posedge CPUCLK);
+  @(posedge CPUCLK);
+  @(posedge CPUCLK);
+
+  dpif.dmemWEN = 0;
+  dpif.dmemstore = '0;
+  dpif.dmemaddr = '0;
+
+	// to put some gap
+  #(2 * PERIOD);
+
+  tb_test_num               += 1;
   tb_test_case              = "Halt and write hits";
 
   dpif.halt = 1;

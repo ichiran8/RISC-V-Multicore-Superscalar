@@ -132,13 +132,13 @@ always_comb begin : OUTPUT_LOGIC
         end
         update1: begin
             ccif.dWEN = 1; // no way to know if victim block is written, so need both updates
-            ccif.dstore = frame[req.idx][frame_select[1]].data[req.blkoff]; // write the data you have first
-            ccif.daddr = {req.tag, req.idx, req.blkoff, req.bytoff}; // check this
+            ccif.dstore = frame[req.idx][lru[req.idx]].data[0];
+            ccif.daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b0, req.bytoff}; // check this
         end
         update2: begin
             ccif.dWEN = 1;
-            ccif.dstore = frame[req.idx][frame_select[1]].data[!req.blkoff];
-            ccif.daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // check this
+            ccif.dstore = frame[req.idx][lru[req.idx]].data[1];
+            ccif.daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b1, req.bytoff}; // check this
         end
         access1: begin
             ccif.dREN = 1;
