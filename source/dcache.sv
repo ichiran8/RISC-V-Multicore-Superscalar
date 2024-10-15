@@ -34,8 +34,8 @@ logic [31:0] next_hit_counter;
 logic prev_dhit;
 logic[7:0][1:0] dirty_bits;
 
-logic[3:0] flush_timer;
-logic[3:0] next_flush_timer;
+logic[4:0] flush_timer;
+logic[4:0] next_flush_timer;
 
 typedef enum bit [8:0] {request, access1, access2, update1, update2, flush1, flush2, write_hits, terminate} stateType;
 
@@ -60,8 +60,8 @@ always_comb begin : NEXT_STATE_LOGIC
         update2: next_state = !ccif.dwait ? access1 : state;
         access1: next_state = (!ccif.dwait & dpif.dmemWEN) ? request : !ccif.dwait ? access2 : state;
         access2: next_state = !ccif.dwait ? request : state;
-        flush1: next_state = (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush2 : state; // flush first word
-        flush2: next_state = flush_timer == 4'd15 ? write_hits : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush1 : state; // flush second word
+        flush1: next_state = flush_timer == 5'd16 ? write_hits : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush2 : state; // flush first word
+        flush2: next_state = (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush1 : state; // flush second word
         write_hits: next_state = !ccif.dwait ? terminate : state;
         // terminate: stay in terminate, i think
     endcase
@@ -166,7 +166,7 @@ always_comb begin : OUTPUT_LOGIC
             end
         end
         flush1: begin
-            if(frame[flush_timer[2:0]][flush_timer[3]].dirty) begin
+            if(flush_timer != 5'd16 & frame[flush_timer[2:0]][flush_timer[3]].dirty) begin
                 ccif.dWEN = 1;
                 ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[0];
                 ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b0, 2'b00};
