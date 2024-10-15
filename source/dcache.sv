@@ -13,6 +13,9 @@ import cpu_types_pkg::*;
 
 dcachef_t req;
 
+dcache_frame [7:0][1:0] frame; // eight sets of two frames
+dcache_frame [7:0][1:0] next_frame;
+
 assign req.bytoff = dpif.dmemaddr[1:0]; // 2 bits, always 00
 assign req.blkoff = dpif.dmemaddr[2]; // 1 bit
 assign req.idx = dpif.dmemaddr[5:3]; // 3 bits
@@ -21,9 +24,6 @@ assign req.tag = dpif.dmemaddr[31:6]; // 26 bits
 logic[1:0] frame_select; // 10 = hit frame2, 01 = hit frame1, 00 = no match
 assign frame_select = (frame[req.idx][1].tag == req.tag & frame[req.idx][1].valid) ? 2'd2 : (frame[req.idx][0].tag == req.tag & frame[req.idx][0].valid) ? 2'd1 : 2'd0;
 // we always check, maybe better to include dpif.dmemREN | dpif.dmemWEN
-
-dcache_frame [7:0][1:0] frame; // eight sets of two frames
-dcache_frame [7:0][1:0] next_frame;
 
 logic [7:0] lru; // 0 = frame1 least recently used, 1 = frame2
 logic [7:0] next_lru;

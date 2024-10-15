@@ -8,14 +8,14 @@
 
 module caches (
   input logic CLK, nRST,
-  datapath_cache_if.cache dcif,
+  datapath_cache_if dcif,
   caches_if cif
 );
 
   // icache
-  icache  ICACHE(CLK, nRST, dcif, cif);
+  icache  ICACHE(CLK, nRST, dcif.icache, cif);
   // dcache
-  dcache  DCACHE(CLK, nRST, dcif, cif);
+  dcache  DCACHE(CLK, nRST, dcif.dcache, cif);
 
   // dcache invalidate before halt handled by dcache when exists
   // assign dcif.flushed = dcif.halt;

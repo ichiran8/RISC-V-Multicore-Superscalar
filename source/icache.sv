@@ -30,15 +30,24 @@ module icache(
     logic next_iREN;
     word_t next_iaddr;
 
+    logic test_iREN;
+    word_t test_iaddr;
+
     always_ff @(posedge CLK, negedge nRST) begin
         if(!nRST) begin
             state <= IDLE;
             cache <= '0;
+            caif.iREN <= '0;
+            caif.iaddr <= '0;
+            // test_iREN <= '0;
+            // test_iaddr  next_iaddr;
         end else begin
             state <= next_state;
             cache <= next_cache;
-            //caif.iREN <= next_iREN;
-            //caif.iaddr <= next_iaddr;
+            caif.iREN <= next_iREN;
+            caif.iaddr <= next_iaddr;
+            // test_iREN <= next_iREN;
+            // test_iaddr <= next_iaddr;
         end
     end
 
@@ -46,26 +55,26 @@ module icache(
     always_comb begin // state machine
         next_state = state;
         next_cache = cache;
-       // next_iaddr = caif.iaddr;
-        //next_iREN = caif.iREN;
-        caif.iREN = 1'b0;
-        caif.iaddr = '0;
+        next_iaddr = caif.iaddr;
+        next_iREN = caif.iREN;
+        // caif.iREN = 1'b0;
+        // caif.iaddr = '0;
         casez(state)
             IDLE : begin
-                 if (!dpif.ihit) begin
+                 if (!dpif.ihit && dpif.imemREN) begin
                     next_state = MEM;
-                    //next_iREN = 1'b1;  // if we were to register iREN and imemaddr, we would need to do this
-                    //next_iaddr = dpif.imemaddr;
+                    next_iREN = 1'b1;  // if we were to register iREN and imemaddr, we would need to do this
+                    next_iaddr = dpif.imemaddr;
                  end
             
             end
             MEM : begin
-                caif.iREN = 1'b1;
-                caif.iaddr = dpif.imemaddr;
+                // caif.iREN = 1'b1;
+                // caif.iaddr = dpif.imemaddr;
                 if (!caif.iwait) begin
                     next_state = IDLE;
                     next_cache[icheck.idx] = {1'b1, icheck.tag, caif.iload};
-                    //next_iREN = 1'b0;
+                    next_iREN = 1'b0;
                 end
             end
         endcase
