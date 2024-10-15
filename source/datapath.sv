@@ -37,7 +37,7 @@ logic [1:0] forwardA, forwardB;
   if_id_t if_id;
 
   typedef struct packed {
-    word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen, jump_target;
+    word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen, jump_target, instruction;
     aluop_t alu_op;
     logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2, zero; 
     regbits_t wsel, rsel1, rsel2;
@@ -47,19 +47,19 @@ logic [1:0] forwardA, forwardB;
   id_ex_t id_ex;
 
   typedef struct packed {
-    word_t write_selected, dmemstore, dmemload, imm_gen, curr_pc, portA, portB;
+    word_t write_selected, dmemstore, dmemload, imm_gen, curr_pc, portA, portB, newpc, instruction, rdat1, rdat2;
     logic regwrite, memwrite, memread, memreg, halt, zero; 
     logic [1:0] branch_type;
-    regbits_t wsel;
+    regbits_t wsel, rsel1, rsel2;
   } ex_mem_t;
 
    ex_mem_t ex_mem;
 
 
 typedef struct packed {
-  word_t  write_back;
+  word_t  write_back, newpc, instruction, rdat1, rdat2;
   logic regwrite, halt, memreg; 
-  regbits_t wsel;
+  regbits_t wsel, rsel1, rsel2;
 } mem_wb_t;
 
 mem_wb_t mem_wb;
@@ -116,6 +116,7 @@ assign cif.instruction = if_id.instruction;
     else if (id_flush & dpif.ihit)
       id_ex <= '0;
     else if (dpif.ihit) begin
+        id_ex.instruction <= if_id.instruction;
         id_ex.rdat1 <= rfif.rdat1;
         id_ex.rdat2 <= rfif.rdat2;
         id_ex.rsel1 <= rfif.rsel1;
@@ -201,6 +202,9 @@ end
       ex_mem.dmemload <= dpif.dmemload;
     end 
     else if (dpif.ihit) begin
+      ex_mem.instruction <= id_ex.instruction;
+      ex_mem.rdat1 <= id_ex.rdat1;
+      ex_mem.rdat2 <= id_ex.rdat2;
       ex_mem.write_selected <= write_selected; // this is put above
       ex_mem.regwrite <= id_ex.regwrite; // determine whether or not we write into a register
       ex_mem.memwrite <= id_ex.memwrite; // determine whether or not we write into memory
@@ -215,6 +219,9 @@ end
       ex_mem.zero <= id_ex.zero;
       ex_mem.portA <= aluif.rda;
       ex_mem.portB <= aluif.rdb;
+      ex_mem.newpc <= (id_ex.jump | id_ex.jalr) ? next_pc : id_ex.pc_add;
+      ex_mem.rsel1 <= id_ex.rsel1;
+      ex_mem.rsel2 <= id_ex.rsel2;
     end
   end
 
@@ -250,6 +257,9 @@ always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
     mem_wb.halt <= ex_mem.halt;
     mem_wb.memreg <= ex_mem.memreg;
     mem_wb.write_back <= write_back; 
+    mem_wb.newpc <= (branch) ? next_pc : ex_mem.newpc;
+    mem_wb.rsel1 <= ex_mem.rsel1;
+    mem_wb.rsel2 <= ex_mem.rsel2;
   end
 end
  

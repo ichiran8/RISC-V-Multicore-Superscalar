@@ -77,6 +77,49 @@ module system_tb;
     .reg_dat(DUT.CPU.DP.MW_o.wdat)
   );
   */
+  cpu_tracker_rv32 cpu_track0 (
+  // No need to change this
+  .CLK(DUT.CPU.DP.CLK),
+  // Since single cycle, this is just PC enable
+  .wb_stall(~DUT.CPU.DP.pc0_en),
+  //dhit signal
+  .dhit(DUT.CPU.DP.dpif.dhit),
+  //funct3 field
+  .funct_3(DUT.CPU.DP.funct3),
+  //funct7 field
+  .funct_7(DUT.CPU.DP.funct7),
+  //funct7 opcode
+  .opcode(DUT.CPU.DP.opcode),
+  // The 'rs1' portion of an instruction
+  .rs1(DUT.CPU.DP.rsel1),
+  // The 'rs2' portion of an instruction
+  .rs2(DUT.CPU.DP.rsel2),
+  //write select from reg. file
+  .wsel(DUT.CPU.DP.wsel),
+  //Instruction loaded from memory
+  .instr(DUT.CPU.DP.dpif.imemload),
+  // Connect the PC to this
+  .pc(DUT.CPU.DP.pc),
+  // Connect the next PC to this
+  .next_pc_val(DUT.CPU.DP.pc_selected),
+  // Connect branch addr
+  .branch_addr(DUT.CPU.DP.branch_imm),
+  // Connect jump addr
+  .jump_addr(DUT.CPU.DP.j_imm),
+  // This means it should already be shifted/extended/whatever
+  .imm(DUT.CPU.DP.imm_ext),
+  //Pre shifted bits from U-type inst.
+  .lui_pre_shift(DUT.CPU.DP.dpif.imemload[31:12]),
+  //Data to store to memory
+  .store_dat(DUT.CPU.DP.dpif.dmemstore),
+  //Data to write to reg. file
+  .reg_dat(DUT.CPU.DP.wdat),
+  //Data loaded from memory
+  .load_dat(DUT.CPU.DP.dpif.dmemload),
+  //Addr. to load/store from/to memory
+  .dat_addr(DUT.CPU.DP.dpif.dmemaddr)
+);
+
 `else
   system                              DUT (,,,,//for altera debug ports
     CLK,
@@ -90,6 +133,7 @@ module system_tb;
     syif.tbCTRL
   );
 `endif
+
 endmodule
 
 program test(input logic CLK, output logic nRST, system_if.tb syif);
@@ -165,3 +209,4 @@ program test(input logic CLK, output logic nRST, system_if.tb syif);
     end
   endtask
 endprogram
+
