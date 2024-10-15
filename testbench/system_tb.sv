@@ -18,6 +18,7 @@
 
 module system_tb;
   // clock period
+  import cpu_types_pkg::*;
   parameter PERIOD = 20;
 
   // signals
@@ -76,48 +77,52 @@ module system_tb;
     // The value selected to be written into register during WB stage
     .reg_dat(DUT.CPU.DP.MW_o.wdat)
   );
+
+
+
+
   */
   cpu_tracker_rv32 cpu_track0 (
   // No need to change this
   .CLK(DUT.CPU.DP.CLK),
   // Since single cycle, this is just PC enable
-  .wb_stall(~DUT.CPU.DP.pc0_en),
+  .wb_stall(~DUT.CPU.DP.dpif.ihit),
   //dhit signal
   .dhit(DUT.CPU.DP.dpif.dhit),
   //funct3 field
-  .funct_3(DUT.CPU.DP.funct3),
+  .funct_3(DUT.CPU.DP.mem_wb.instruction[14:12]),
   //funct7 field
-  .funct_7(DUT.CPU.DP.funct7),
+  .funct_7(DUT.CPU.DP.mem_wb.instruction[31:25]),
   //funct7 opcode
-  .opcode(DUT.CPU.DP.opcode),
+  .opcode(opcode_t'(DUT.CPU.DP.mem_wb.instruction[6:0])),
   // The 'rs1' portion of an instruction
-  .rs1(DUT.CPU.DP.rsel1),
+  .rs1(DUT.CPU.DP.mem_wb.instruction[19:15]),
   // The 'rs2' portion of an instruction
-  .rs2(DUT.CPU.DP.rsel2),
+  .rs2(DUT.CPU.DP.mem_wb.instruction[24:20]),
   //write select from reg. file
-  .wsel(DUT.CPU.DP.wsel),
+  .wsel(DUT.CPU.DP.mem_wb.instruction[11:7]),
   //Instruction loaded from memory
-  .instr(DUT.CPU.DP.dpif.imemload),
+  .instr(DUT.CPU.DP.mem_wb.instruction),
   // Connect the PC to this
-  .pc(DUT.CPU.DP.pc),
+  .pc(DUT.CPU.DP.mem_wb.curr_pc),
   // Connect the next PC to this
-  .next_pc_val(DUT.CPU.DP.pc_selected),
+  .next_pc_val(DUT.CPU.DP.mem_wb.newpc),
   // Connect branch addr
-  .branch_addr(DUT.CPU.DP.branch_imm),
+  .branch_addr(DUT.CPU.DP.mem_wb.newpc),
   // Connect jump addr
-  .jump_addr(DUT.CPU.DP.j_imm),
+  .jump_addr(DUT.CPU.DP.mem_wb.newpc),
   // This means it should already be shifted/extended/whatever
-  .imm(DUT.CPU.DP.imm_ext),
+  .imm(DUT.CPU.DP.mem_wb.imm_gen),
   //Pre shifted bits from U-type inst.
-  .lui_pre_shift(DUT.CPU.DP.dpif.imemload[31:12]),
+  .lui_pre_shift(DUT.CPU.DP.mem_wb.u_addr),
   //Data to store to memory
-  .store_dat(DUT.CPU.DP.dpif.dmemstore),
+  .store_dat(DUT.CPU.DP.mem_wb.dmemstore),
   //Data to write to reg. file
-  .reg_dat(DUT.CPU.DP.wdat),
+  .reg_dat(DUT.CPU.DP.mem_wb.write_back),
   //Data loaded from memory
-  .load_dat(DUT.CPU.DP.dpif.dmemload),
+  .load_dat(DUT.CPU.DP.mem_wb.dmemload),
   //Addr. to load/store from/to memory
-  .dat_addr(DUT.CPU.DP.dpif.dmemaddr)
+  .dat_addr(DUT.CPU.DP.mem_wb.dmemaddr)
 );
 
 `else

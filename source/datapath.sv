@@ -32,12 +32,14 @@ logic [1:0] forwardA, forwardB;
 
   typedef struct packed {
     word_t instruction, pc_add, curr_pc;
+    logic [19:0] u_addr;
   } if_id_t;
 
   if_id_t if_id;
 
   typedef struct packed {
     word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen, jump_target, instruction;
+    logic [19:0] u_addr;
     aluop_t alu_op;
     logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2, zero; 
     regbits_t wsel, rsel1, rsel2;
@@ -48,6 +50,7 @@ logic [1:0] forwardA, forwardB;
 
   typedef struct packed {
     word_t write_selected, dmemstore, dmemload, imm_gen, curr_pc, portA, portB, newpc, instruction, rdat1, rdat2;
+    logic [19:0] u_addr;
     logic regwrite, memwrite, memread, memreg, halt, zero; 
     logic [1:0] branch_type;
     regbits_t wsel, rsel1, rsel2;
@@ -57,7 +60,8 @@ logic [1:0] forwardA, forwardB;
 
 
 typedef struct packed {
-  word_t  write_back, newpc, instruction, rdat1, rdat2;
+  word_t  write_back, newpc, instruction, rdat1, rdat2, imm_gen, curr_pc, dmemaddr, dmemstore, dmemload;
+  logic [19:0] u_addr;
   logic regwrite, halt, memreg; 
   regbits_t wsel, rsel1, rsel2;
 } mem_wb_t;
@@ -101,6 +105,7 @@ end
       if_id.instruction <= dpif.imemload;
       if_id.pc_add <= pc + 4;
       if_id.curr_pc <= pc;
+      if_id.u_addr <= dpif.imemload[31:12];
     end
   end
 assign cif.instruction = if_id.instruction;
@@ -140,6 +145,7 @@ assign cif.instruction = if_id.instruction;
         id_ex.zero <= cif.zero;
         id_ex.jump_target <= if_id.curr_pc + cif.imm_gen;
         id_ex.switch1 <= cif.jalr | cif.jump;
+        id_ex.u_addr <= if_id.u_addr;
       end
   end
 always_comb begin
@@ -222,6 +228,7 @@ end
       ex_mem.newpc <= (id_ex.jump | id_ex.jalr) ? next_pc : id_ex.pc_add;
       ex_mem.rsel1 <= id_ex.rsel1;
       ex_mem.rsel2 <= id_ex.rsel2;
+      ex_mem.u_addr <= id_ex.u_addr;
     end
   end
 
@@ -260,6 +267,13 @@ always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
     mem_wb.newpc <= (branch) ? next_pc : ex_mem.newpc;
     mem_wb.rsel1 <= ex_mem.rsel1;
     mem_wb.rsel2 <= ex_mem.rsel2;
+    mem_wb.instruction <= ex_mem.instruction;
+    mem_wb.imm_gen <= ex_mem.imm_gen;
+    mem_wb.curr_pc <= ex_mem.curr_pc;
+    mem_wb.dmemload <=  ex_mem.dmemload;
+    mem_wb.dmemaddr <= ex_mem.write_selected;
+    mem_wb.dmemstore <= ex_mem.dmemstore;
+    mem_wb.u_addr <= ex_mem.u_addr;
   end
 end
  
