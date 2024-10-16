@@ -45,6 +45,9 @@ stateType next_state;
 logic next_dREN;
 logic next_dWEN;
 
+logic [31:0] next_daddr;
+logic [31:0] next_dstore;
+
 always_comb begin : NEXT_STATE_LOGIC
     next_state = state;
 
@@ -101,6 +104,8 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         flush_timer <= '0;
         ccif.dREN <= 0;
         ccif.dWEN <= 0;
+        ccif.daddr <= '0;
+        ccif.dstore <= '0;
     end
     else begin
         frame <= next_frame;
@@ -111,13 +116,15 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         flush_timer <= next_flush_timer;
         ccif.dREN <= next_dREN;
         ccif.dWEN <= next_dWEN;
+        ccif.daddr <= next_daddr;
+        ccif.dstore <= next_dstore;
     end
 end
 
 always_comb begin : OUTPUT_LOGIC
     // To Controller
-    ccif.daddr = 0;
-    ccif.dstore = 0;
+    // ccif.daddr = 0;
+    // ccif.dstore = 0;
 
     // To Datapath
     dpif.dhit = 0;
@@ -131,6 +138,8 @@ always_comb begin : OUTPUT_LOGIC
     next_flush_timer = flush_timer;
     next_dREN = 0;
     next_dWEN = 0;
+    next_daddr = '0;
+    next_dstore = '0;
 
     case (state)
         request: begin
@@ -151,28 +160,36 @@ always_comb begin : OUTPUT_LOGIC
                     end
                 end
             end
-            if(next_state == update1)
+            if(next_state == update1) begin
                 next_dWEN = 1;
+                next_dstore = frame[req.idx][lru[req.idx]].data[0];
+                next_daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b0, req.bytoff}; // check this
+            end
         end
         update1: begin
-            ccif.dstore = frame[req.idx][lru[req.idx]].data[0];
-            ccif.daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b0, req.bytoff}; // check this
-
-            if(next_state == update1 || next_state == update2)
+            if(next_state == update1) begin
                 next_dWEN = 1;
+                next_dstore = frame[req.idx][lru[req.idx]].data[0];
+                next_daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b0, req.bytoff}; // check this
+            end
+            if(next_state == update2) begin
+                next_dWEN = 1;
+                next_dstore = frame[req.idx][lru[req.idx]].data[1];
+                next_daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b1, req.bytoff}; // check this
+            end
         end
         update2: begin
-            ccif.dstore = frame[req.idx][lru[req.idx]].data[1];
-            ccif.daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b1, req.bytoff}; // check this
-
-            if(next_state == update2)
+            if(next_state == update2) begin
                 next_dWEN = 1;
-            if(next_state == access1)
+                next_dstore = frame[req.idx][lru[req.idx]].data[1];
+                next_daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b1, req.bytoff}; // check this
+            end
+            if(next_state == access1) begin
                 next_dREN = 1;
+                next_daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
+            end
         end
         access1: begin
-            ccif.daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
-
             if(dpif.dmemWEN & next_state == request) begin
                next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
                next_frame[req.idx][lru[req.idx]].data[req.blkoff] = dpif.dmemstore;
@@ -186,13 +203,14 @@ always_comb begin : OUTPUT_LOGIC
             else if(next_state == access2) begin
                next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
                next_dREN = 1;
+               next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
             end
-            else if(next_state == access1)
+            else if(next_state == access1) begin
                next_dREN = 1;
+               next_daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
+            end
         end
         access2: begin
-            ccif.daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
-
             if(next_state == request) begin
                next_frame[req.idx][lru[req.idx]].data[req.blkoff] = ccif.dload;
                next_frame[req.idx][lru[req.idx]].tag = req.tag;
@@ -205,34 +223,35 @@ always_comb begin : OUTPUT_LOGIC
 
             if(next_state == access2) begin
                next_dREN = 1;
+               next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
             end
         end
         flush1: begin
             if(flush_timer != 5'd16 & frame[flush_timer[2:0]][flush_timer[3]].dirty) begin
-                ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[0];
-                ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b0, 2'b00};
-
-                if(next_state == flush1) // right now has extra cycle delay, but otherwise could write when not supposed to
+                if(next_state == flush1) begin // right now has extra cycle delay, but otherwise could write when not supposed to
                     next_dWEN = 1;
+                    next_dstore = frame[flush_timer[2:0]][flush_timer[3]].data[0];
+                    next_daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b0, 2'b00};
+                end
             end
         end
         flush2: begin
             if(frame[flush_timer[2:0]][flush_timer[3]].dirty) begin
-                ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[1];
-                ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b1, 2'b00};
-
-                if(next_state == flush2)
+                if(next_state == flush2) begin
                     next_dWEN = 1;
+                    next_dstore = frame[flush_timer[2:0]][flush_timer[3]].data[1];
+                    next_daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b1, 2'b00};
+                end
             end
             if(next_state == flush1)
                 next_flush_timer = flush_timer + 1;
         end
         write_hits: begin
-            ccif.dstore = hit_counter;
-            ccif.daddr = 32'h3100;
-
-            if(next_state == write_hits)
+            if(next_state == write_hits) begin
+                next_dstore = hit_counter;
+                next_daddr = 32'h3100;
                 next_dWEN = 1;
+            end
         end
         terminate: begin
             dpif.flushed = 1;
