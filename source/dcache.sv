@@ -212,7 +212,7 @@ always_comb begin : OUTPUT_LOGIC
                 ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[0];
                 ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b0, 2'b00};
 
-                if(next_state == flush1 || next_state == flush2 || next_state == write_hits)
+                if(next_state == flush1) // right now has extra cycle delay, but otherwise could write when not supposed to
                     next_dWEN = 1;
             end
         end
@@ -221,7 +221,7 @@ always_comb begin : OUTPUT_LOGIC
                 ccif.dstore = frame[flush_timer[2:0]][flush_timer[3]].data[1];
                 ccif.daddr = {frame[flush_timer[2:0]][flush_timer[3]].tag, flush_timer[2:0], 1'b1, 2'b00};
 
-                if(next_state == flush1 || next_state == flush2)
+                if(next_state == flush2)
                     next_dWEN = 1;
             end
             if(next_state == flush1)
