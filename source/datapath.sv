@@ -25,20 +25,21 @@ module datapath (
   control_unit_if cif ();
   arithmetic_logic_if aluif ();
 
-word_t next_pc, pc, portA, portB, write_back;
+word_t next_pc, pc, portA, portB, write_back; 
+logic control_pipe;
 logic switch1, PCWrite, if_id_write; // we're going to have two flush signals for id_ex, so seperated names
-logic if_flush, id_flush, ex_flush, branch;
+logic if_flush, id_flush, ex_flush, branch, stall;
 logic [1:0] forwardA, forwardB;
 
   typedef struct packed {
     word_t instruction, pc_add, curr_pc;
-    logic [19:0] u_addr;
+    //logic [19:0] u_addr;
   } if_id_t;
 
   if_id_t if_id;
 
   typedef struct packed {
-    word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen, jump_target, instruction;
+    word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen, jump_target; //, instruction;
     logic [19:0] u_addr;
     aluop_t alu_op;
     logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2, zero; 
@@ -49,26 +50,42 @@ logic [1:0] forwardA, forwardB;
   id_ex_t id_ex;
 
   typedef struct packed {
-    word_t write_selected, dmemstore, dmemload, imm_gen, curr_pc, portA, portB, newpc, instruction, rdat1, rdat2;
-    logic [19:0] u_addr;
+    word_t write_selected, dmemstore, dmemload, imm_gen, curr_pc, portA, portB;//, newpc, instruction, rdat1, rdat2;
+    //logic [19:0] u_addr;
     logic regwrite, memwrite, memread, memreg, halt, zero; 
     logic [1:0] branch_type;
-    regbits_t wsel, rsel1, rsel2;
+    regbits_t wsel;//, rsel1, rsel2;
   } ex_mem_t;
 
    ex_mem_t ex_mem;
 
 
 typedef struct packed {
-  word_t  write_back, newpc, instruction, rdat1, rdat2, imm_gen, curr_pc, dmemaddr, dmemstore, dmemload;
-  logic [19:0] u_addr;
+  word_t  write_back;//, newpc, instruction, rdat1, rdat2, imm_gen, curr_pc, dmemaddr, dmemstore, dmemload;
+  //logic [19:0] u_addr;
   logic regwrite, halt, memreg; 
-  regbits_t wsel, rsel1, rsel2;
+  regbits_t wsel;//, rsel1, rsel2;
 } mem_wb_t;
 
 mem_wb_t mem_wb;
+// logic next_stall;
+// always_ff @(posedge CLK, negedge nRST) begin
+//   if(!nRST) begin
+//     stall <= 1'b0;
+//   end else begin
+//     stall <= next_stall; //(id_ex.memread && ((id_ex.wsel == rfif.rsel1) || (id_ex.wsel == rfif.rsel2)));
+//   end
+// end
 
-
+// always_comb begin 
+//   next_stall = stall;
+//   if(!stall) begin
+//     next_stall = (id_ex.memread && ((id_ex.wsel == rfif.rsel1) || (id_ex.wsel == rfif.rsel2)));
+//   end else if (stall) begin
+//     next_stall = (ex_mem.memread && ((ex_mem.wsel == id_ex.rsel1) || (ex_mem.wsel == id_ex.rsel2)));
+//   end
+// end
+//assign stall = (ex_mem.memread && ((ex_mem.wsel == id_ex.rsel1) || (ex_mem.wsel == id_ex.rsel2)));
 // ********************* MISC *************************** //
 
 register_file rf(CLK, nRST, rfif);
@@ -76,19 +93,20 @@ alu alu(aluif);
 control_unit cu1(cif);
 forwarding_unit forward(.id_ex_rsel1(id_ex.rsel1), .id_ex_rsel2(id_ex.rsel2), .ex_mem_wsel(ex_mem.wsel), .mem_wb_wsel(mem_wb.wsel), .ex_mem_regwrite(ex_mem.regwrite), .mem_wb_regwrite(mem_wb.regwrite), .forwardA(forwardA), .forwardB(forwardB));
 //hazard_unit hazarding(.id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write), .flush_id_ex(hazard_flush_id_ex));
-hazard_unit hazarding(.branch(branch), .jump(id_ex.jump | id_ex.jalr), .halt(id_ex.halt), .if_flush(if_flush), .id_flush(id_flush), .ex_flush(ex_flush)); //.id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write)); // check halt
+hazard_unit hazarding(.branch(branch), .jump(id_ex.jump | id_ex.jalr), .halt(id_ex.halt), .if_flush(if_flush), .id_flush(id_flush), .ex_flush(ex_flush), .id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write)); // check halt
     
-assign dpif.imemREN = !(dpif.dmemREN | dpif.dmemWEN);
+assign dpif.imemREN = 1'b1;//(stall) ? 1'b0 : 1'b1; //!(dpif.dmemREN | dpif.dmemWEN);
+assign control_pipe = (ex_mem.memread | ex_mem.memwrite) ? (dpif.dhit & dpif.ihit) : dpif.ihit;
 assign dpif.imemaddr = pc;
-assign rfif.rsel1 = dpif.dhit ? id_ex.rsel1 : cif.rsel1;
-assign rfif.rsel2 = dpif.dhit ? id_ex.rsel2 : cif.rsel2;
+assign rfif.rsel1 = cif.rsel1; //dpif.dhit ? id_ex.rsel1 : cif.rsel1;
+assign rfif.rsel2 = cif.rsel2; //dpif.dhit ? id_ex.rsel2 : cif.rsel2;
 
-//********************** PROGRAM COUNTER ************************** //
+// ********************** PROGRAM COUNTER ************************** //
 
 always_ff @(posedge CLK, negedge nRST) begin
   if(!nRST) begin
     pc <= '0;
-  end else if (dpif.ihit) begin // include the dHit and iHit signals
+  end else if (control_pipe & PCWrite) begin // include the dHit and iHit signals
     pc <= next_pc;//(ru.pc_enable) ? next_pc : pc;
   end
 end
@@ -99,13 +117,13 @@ end
   always_ff @(posedge CLK, negedge nRST) begin : IF_ID_LATCH
     if(!nRST) begin // add flush here
       if_id <= '0;
-    end else if (if_flush & dpif.ihit) begin
+    end else if (if_flush & control_pipe) begin
       if_id <= '0;
-    end else if (dpif.ihit) begin
+    end else if (control_pipe & if_id_write) begin
       if_id.instruction <= dpif.imemload;
       if_id.pc_add <= pc + 4;
       if_id.curr_pc <= pc;
-      if_id.u_addr <= dpif.imemload[31:12];
+      //if_id.u_addr <= dpif.imemload[31:12];
     end
   end
 assign cif.instruction = if_id.instruction;
@@ -118,10 +136,10 @@ assign cif.instruction = if_id.instruction;
     if(!nRST) begin
       id_ex <= '0;
     end 
-    else if (id_flush & dpif.ihit)
+    else if (id_flush & control_pipe)
       id_ex <= '0;
-    else if (dpif.ihit) begin
-        id_ex.instruction <= if_id.instruction;
+    else if (control_pipe) begin
+        //id_ex.instruction <= if_id.instruction;
         id_ex.rdat1 <= rfif.rdat1;
         id_ex.rdat2 <= rfif.rdat2;
         id_ex.rsel1 <= rfif.rsel1;
@@ -145,7 +163,7 @@ assign cif.instruction = if_id.instruction;
         id_ex.zero <= cif.zero;
         id_ex.jump_target <= if_id.curr_pc + cif.imm_gen;
         id_ex.switch1 <= cif.jalr | cif.jump;
-        id_ex.u_addr <= if_id.u_addr;
+        //id_ex.u_addr <= if_id.u_addr;
       end
   end
 always_comb begin
@@ -199,18 +217,18 @@ end
   always_ff @(posedge CLK, negedge nRST) begin : EX_MEM_LATCH  
     if(!nRST) begin
       ex_mem <= '0;
-    end else if (ex_flush && dpif.ihit)begin
+    end else if (ex_flush && control_pipe)begin
       ex_mem <= '0;
     end
-    else if (dpif.dhit) begin
+    else if (dpif.dhit & !control_pipe) begin
       ex_mem.memwrite <= 1'b0;
       ex_mem.memread <= 1'b0;
       ex_mem.dmemload <= dpif.dmemload;
     end 
-    else if (dpif.ihit) begin
-      ex_mem.instruction <= id_ex.instruction;
-      ex_mem.rdat1 <= id_ex.rdat1;
-      ex_mem.rdat2 <= id_ex.rdat2;
+    else if (control_pipe) begin
+      //ex_mem.instruction <= id_ex.instruction;
+      //ex_mem.rdat1 <= id_ex.rdat1;
+      //ex_mem.rdat2 <= id_ex.rdat2;
       ex_mem.write_selected <= write_selected; // this is put above
       ex_mem.regwrite <= id_ex.regwrite; // determine whether or not we write into a register
       ex_mem.memwrite <= id_ex.memwrite; // determine whether or not we write into memory
@@ -223,12 +241,12 @@ end
       ex_mem.dmemstore <= portB;
       ex_mem.branch_type <= id_ex.branch_type;
       ex_mem.zero <= id_ex.zero;
-      ex_mem.portA <= aluif.rda;
-      ex_mem.portB <= aluif.rdb;
-      ex_mem.newpc <= (id_ex.jump | id_ex.jalr) ? next_pc : id_ex.pc_add;
-      ex_mem.rsel1 <= id_ex.rsel1;
-      ex_mem.rsel2 <= id_ex.rsel2;
-      ex_mem.u_addr <= id_ex.u_addr;
+      ex_mem.portA <= portA;
+      ex_mem.portB <= portB;
+     //ex_mem.newpc <= (id_ex.jump | id_ex.jalr) ? next_pc : id_ex.pc_add;
+      //ex_mem.rsel1 <= id_ex.rsel1;
+      //ex_mem.rsel2 <= id_ex.rsel2;
+      //ex_mem.u_addr <= id_ex.u_addr;
     end
   end
 
@@ -240,12 +258,13 @@ always_comb begin
     2'd3 : branch = !(($unsigned(ex_mem.portA) >= $unsigned(ex_mem.portB)) ^ ex_mem.zero);//(ex_mem.zero) ? !(($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB))) : (($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB)));
   endcase
 end
-
+word_t load;
+assign load = (dpif.dhit & dpif.ihit) ? dpif.dmemload : ex_mem.dmemload;
 assign dpif.dmemstore = ex_mem.dmemstore; 
 assign dpif.dmemaddr  = ex_mem.write_selected;
 assign dpif.dmemREN   = ex_mem.memread;
 assign dpif.dmemWEN   = ex_mem.memwrite;
-assign write_back     = (ex_mem.memreg) ? ex_mem.dmemload : ex_mem.write_selected;
+assign write_back     = (ex_mem.memreg) ? load : ex_mem.write_selected;
 
 
 
@@ -258,22 +277,22 @@ assign write_back     = (ex_mem.memreg) ? ex_mem.dmemload : ex_mem.write_selecte
 always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
   if(!nRST) begin
     mem_wb <= '0;
-  end else if (dpif.ihit) begin
+  end else if (control_pipe) begin
     mem_wb.wsel <= ex_mem.wsel;
     mem_wb.regwrite <= ex_mem.regwrite;
     mem_wb.halt <= ex_mem.halt;
     mem_wb.memreg <= ex_mem.memreg;
     mem_wb.write_back <= write_back; 
-    mem_wb.newpc <= (branch) ? next_pc : ex_mem.newpc;
-    mem_wb.rsel1 <= ex_mem.rsel1;
-    mem_wb.rsel2 <= ex_mem.rsel2;
-    mem_wb.instruction <= ex_mem.instruction;
-    mem_wb.imm_gen <= ex_mem.imm_gen;
-    mem_wb.curr_pc <= ex_mem.curr_pc;
-    mem_wb.dmemload <=  ex_mem.dmemload;
-    mem_wb.dmemaddr <= ex_mem.write_selected;
-    mem_wb.dmemstore <= ex_mem.dmemstore;
-    mem_wb.u_addr <= ex_mem.u_addr;
+    //mem_wb.newpc <= (branch) ? next_pc : ex_mem.newpc;
+   //mem_wb.rsel1 <= ex_mem.rsel1;
+    //mem_wb.rsel2 <= ex_mem.rsel2;
+    //mem_wb.instruction <= ex_mem.instruction;
+    //mem_wb.imm_gen <= ex_mem.imm_gen;
+    //mem_wb.curr_pc <= ex_mem.curr_pc;
+    //mem_wb.dmemload <=  ex_mem.dmemload;
+    //mem_wb.dmemaddr <= ex_mem.write_selected;
+    //mem_wb.dmemstore <= ex_mem.dmemstore;
+    //mem_wb.u_addr <= ex_mem.u_addr;
   end
 end
  
