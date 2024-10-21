@@ -28,7 +28,7 @@ module datapath (
 word_t next_pc, pc, portA, portB, write_back; 
 logic control_pipe;
 logic switch1, PCWrite, if_id_write; // we're going to have two flush signals for id_ex, so seperated names
-logic if_flush, id_flush, ex_flush, branch, stall;
+logic if_flush, id_flush, ex_flush, branch; //, stall;
 logic [1:0] forwardA, forwardB;
 
   typedef struct packed {
@@ -61,7 +61,7 @@ logic [1:0] forwardA, forwardB;
 
 
 typedef struct packed {
-  word_t  write_back;//, newpc, instruction, rdat1, rdat2, imm_gen, curr_pc, dmemaddr, dmemstore, dmemload;
+  word_t  write_back, write_selected, memload;//, newpc, instruction, rdat1, rdat2, imm_gen, curr_pc, dmemaddr, dmemstore, dmemload;
   //logic [19:0] u_addr;
   logic regwrite, halt, memreg; 
   regbits_t wsel;//, rsel1, rsel2;
@@ -93,7 +93,7 @@ alu alu(aluif);
 control_unit cu1(cif);
 forwarding_unit forward(.id_ex_rsel1(id_ex.rsel1), .id_ex_rsel2(id_ex.rsel2), .ex_mem_wsel(ex_mem.wsel), .mem_wb_wsel(mem_wb.wsel), .ex_mem_regwrite(ex_mem.regwrite), .mem_wb_regwrite(mem_wb.regwrite), .forwardA(forwardA), .forwardB(forwardB));
 //hazard_unit hazarding(.id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write), .flush_id_ex(hazard_flush_id_ex));
-hazard_unit hazarding(.branch(branch), .jump(id_ex.jump | id_ex.jalr), .halt(id_ex.halt), .if_flush(if_flush), .id_flush(id_flush), .ex_flush(ex_flush), .id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write)); // check halt
+hazard_unit hazarding(.branch(branch), .jump(cif.jump), .jalr(id_ex.jalr),  .halt(id_ex.halt), .if_flush(if_flush), .id_flush(id_flush), .ex_flush(ex_flush), .id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write)); // check halt
     
 assign dpif.imemREN = 1'b1;//(stall) ? 1'b0 : 1'b1; //!(dpif.dmemREN | dpif.dmemWEN);
 assign control_pipe = (ex_mem.memread | ex_mem.memwrite) ? (dpif.dhit & dpif.ihit) : dpif.ihit;
@@ -155,13 +155,13 @@ assign cif.instruction = if_id.instruction;
         id_ex.alu_op <= cif.alu_op; 
         id_ex.jump <= cif.jump; 
         id_ex.halt <= cif.halt;
-        id_ex.jalr <= cif.jalr;
+        //id_ex.jalr <= cif.jalr;
         id_ex.branch_type <= cif.branch_type;
         id_ex.switch2 <= cif.lui | cif.cauipc;
         id_ex.wsel <= cif.wsel;
         id_ex.u_type <= (cif.cauipc) ? cif.imm_gen + if_id.curr_pc : cif.imm_gen;
         id_ex.zero <= cif.zero;
-        id_ex.jump_target <= if_id.curr_pc + cif.imm_gen;
+       // id_ex.jump_target <= if_id.curr_pc + cif.imm_gen;
         id_ex.switch1 <= cif.jalr | cif.jump;
         //id_ex.u_addr <= if_id.u_addr;
       end
@@ -170,12 +170,12 @@ always_comb begin
   portA = id_ex.rdat1;
   portB = id_ex.rdat2;
   casez({forwardA})
-    2'b10 : portA = write_back;
-    2'b01 : portA = mem_wb.write_back;
+    2'b10 : portA = ex_mem.write_selected;//write_back;
+    2'b01 : portA = rfif.wdat;//mem_wb.write_back;
   endcase
   casez({forwardB})
-    2'b10 : portB = write_back;
-    2'b01 : portB = mem_wb.write_back;
+    2'b10 : portB = ex_mem.write_selected; //write_back;
+    2'b01 : portB = rfif.wdat; //mem_wb.write_back;
   endcase
 end
 assign aluif.rda = portA;
@@ -198,13 +198,23 @@ always_comb begin
     next_pc = pc + 4; // Don't know if I need this here tbh (no you don't)
     if(branch) begin
       next_pc = ex_mem.curr_pc + ex_mem.imm_gen; // this is calculated in the mem  stage
-    end else begin
-      casez({id_ex.jump, id_ex.jalr})      
-          2'b10 : next_pc = id_ex.jump_target; // this is calculated in the execute stage
-          2'b01 : next_pc = aluif.result;
-      endcase
+    end else if (id_ex.jalr) begin
+       next_pc = aluif.result;
+    end else if (cif.jump) begin
+      next_pc = if_id.curr_pc + cif.imm_gen;
     end
 end
+// always_comb begin
+//     next_pc = pc + 4; // Don't know if I need this here tbh (no you don't)
+//     if(branch) begin
+//       next_pc = ex_mem.curr_pc + ex_mem.imm_gen; // this is calculated in the mem  stage
+//     end else begin
+//       casez({id_ex.jump, id_ex.jalr})      
+//           2'b10 : next_pc = id_ex.jump_target; // this is calculated in the execute stage
+//           2'b01 : next_pc = aluif.result;
+//       endcase
+//     end
+// end
 
 
 // TOTAL NUMBER OF LATCHED BITS : 191 (?)
@@ -220,7 +230,7 @@ end
     end else if (ex_flush && control_pipe)begin
       ex_mem <= '0;
     end
-    else if (dpif.dhit & !control_pipe) begin
+    else if (dpif.dhit & !dpif.ihit) begin
       ex_mem.memwrite <= 1'b0;
       ex_mem.memread <= 1'b0;
       ex_mem.dmemload <= dpif.dmemload;
@@ -241,8 +251,8 @@ end
       ex_mem.dmemstore <= portB;
       ex_mem.branch_type <= id_ex.branch_type;
       ex_mem.zero <= id_ex.zero;
-      ex_mem.portA <= portA;
-      ex_mem.portB <= portB;
+      ex_mem.portA <= aluif.rda;
+      ex_mem.portB <= aluif.rdb;
      //ex_mem.newpc <= (id_ex.jump | id_ex.jalr) ? next_pc : id_ex.pc_add;
       //ex_mem.rsel1 <= id_ex.rsel1;
       //ex_mem.rsel2 <= id_ex.rsel2;
@@ -264,7 +274,7 @@ assign dpif.dmemstore = ex_mem.dmemstore;
 assign dpif.dmemaddr  = ex_mem.write_selected;
 assign dpif.dmemREN   = ex_mem.memread;
 assign dpif.dmemWEN   = ex_mem.memwrite;
-assign write_back     = (ex_mem.memreg) ? load : ex_mem.write_selected;
+//assign write_back     = (ex_mem.memreg) ? load : ex_mem.write_selected;
 
 
 
@@ -282,7 +292,9 @@ always_ff @(posedge CLK, negedge nRST) begin : MEM_WB_LATCH
     mem_wb.regwrite <= ex_mem.regwrite;
     mem_wb.halt <= ex_mem.halt;
     mem_wb.memreg <= ex_mem.memreg;
-    mem_wb.write_back <= write_back; 
+    mem_wb.write_selected <= ex_mem.write_selected;
+    mem_wb.memload <= load;
+    //mem_wb.write_back <= write_back; 
     //mem_wb.newpc <= (branch) ? next_pc : ex_mem.newpc;
    //mem_wb.rsel1 <= ex_mem.rsel1;
     //mem_wb.rsel2 <= ex_mem.rsel2;
@@ -298,7 +310,7 @@ end
  
 assign rfif.wsel = mem_wb.wsel;
 
-assign rfif.wdat = mem_wb.write_back; 
+assign rfif.wdat = mem_wb.memreg ? mem_wb.memload : mem_wb.write_selected; //mem_wb.write_back; 
 assign rfif.WEN  = mem_wb.regwrite;
 
 
