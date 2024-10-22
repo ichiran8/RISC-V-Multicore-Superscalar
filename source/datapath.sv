@@ -39,7 +39,7 @@ logic [1:0] forwardA, forwardB;
   if_id_t if_id;
 
   typedef struct packed {
-    word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen, jump_target; //, instruction;
+    word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen; //, instruction;
     logic [19:0] u_addr;
     aluop_t alu_op;
     logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2, zero; 
@@ -155,13 +155,13 @@ assign cif.instruction = if_id.instruction;
         id_ex.alu_op <= cif.alu_op; 
         id_ex.jump <= cif.jump; 
         id_ex.halt <= cif.halt;
-        //id_ex.jalr <= cif.jalr;
+        id_ex.jalr <= cif.jalr;
         id_ex.branch_type <= cif.branch_type;
         id_ex.switch2 <= cif.lui | cif.cauipc;
         id_ex.wsel <= cif.wsel;
         id_ex.u_type <= (cif.cauipc) ? cif.imm_gen + if_id.curr_pc : cif.imm_gen;
         id_ex.zero <= cif.zero;
-       // id_ex.jump_target <= if_id.curr_pc + cif.imm_gen;
+        //id_ex.jump_target <= if_id.curr_pc + cif.imm_gen;
         id_ex.switch1 <= cif.jalr | cif.jump;
         //id_ex.u_addr <= if_id.u_addr;
       end

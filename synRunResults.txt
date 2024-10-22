@@ -1,6 +1,6 @@
 make[1]: Entering directory `/home/ecegrid/a/mg236/ece437/processors'
 
-Hello mg236@ececomp1.ecn.purdue.edu, you forgot some targets.
+Hello mg236@ececomp3.ecn.purdue.edu, you forgot some targets.
 	If you need instructions to use this Makefile:
 		'make <module_name>' to build module
 		'make <module_name>_tb' to build module + testbench
@@ -22,7 +22,7 @@ Hello mg236@ececomp1.ecn.purdue.edu, you forgot some targets.
 make[1]: Leaving directory `/home/ecegrid/a/mg236/ece437/processors'
 vlog  +acc -sv12compat -mfcu -lint +incdir+include -suppress 12110 -suppress 7061  testbench/system_tb.sv
 QuestaSim-64 vlog 2021.4 Compiler 2021.10 Oct 13 2021
-Start time: 09:42:08 on Oct 21,2024
+Start time: 15:52:29 on Oct 21,2024
 vlog "+acc" -sv12compat -mfcu -lint "+incdir+include" -suppress 12110 -suppress 7061 testbench/system_tb.sv 
 -- Compiling package cpu_types_pkg
 -- Compiling interface system_if
@@ -32,7 +32,7 @@ vlog "+acc" -sv12compat -mfcu -lint "+incdir+include" -suppress 12110 -suppress 
 
 Top level modules:
 	system_tb
-End time: 09:42:08 on Oct 21,2024, Elapsed time: 0:00:00
+End time: 15:52:29 on Oct 21,2024, Elapsed time: 0:00:00
 Errors: 0, Warnings: 0
 Reading pref.tcl
 
@@ -45,7 +45,7 @@ Reading pref.tcl
 # ** Note: Multiple occurrences of ini variable ToggleWidthLimit are found, only first occurence will be considered.
 # ** Note: Multiple occurrences of ini variable ToggleWidthLimit are found, only first occurence will be considered.
 # vsim -coverage -suppress 12110 -suppress 7061 -c -do "run -all; exit;" -L altera_mf_ver -L altera_ver -L cycloneive_ver -wlf system_tb.wlf work.system_tb 
-# Start time: 09:42:08 on Oct 21,2024
+# Start time: 15:52:30 on Oct 21,2024
 # ** Note: (vsim-3812) Design is being optimized...
 # ** Note: (vopt-143) Recognized 1 FSM in module "dcache(fast)".
 ###### include/cache_control_if.vh(79):       iREN[1] = cif1.iREN;
@@ -82,7 +82,6 @@ Reading pref.tcl
 ###### include/cache_control_if.vh(101):       cif1.ccsnoopaddr = ccsnoopaddr[1];
 # ** Warning: include/cache_control_if.vh(101): (vopt-2696) Index 1 into array dimension 1 of 'ccsnoopaddr' is out of bounds.
 # ** Note: (vsim-12126) Error and warning message counts have been restored: Errors=0, Warnings=18.
-# Break key hit
 # //  Questa Sim-64
 # //  Version 2021.4 linux_x86_64 Oct 13 2021
 # //
@@ -97,7 +96,43 @@ Reading pref.tcl
 # //  is prohibited from disclosure under the Trade Secrets Act,
 # //  18 U.S.C. Section 1905.
 # //
-# Error loading design
-# End time: 09:42:10 on Oct 21,2024, Elapsed time: 0:00:02
+# Loading sv_std.std
+# Loading work.cpu_types_pkg(fast)
+# Loading work.system_tb(fast)
+# Loading work.system_if(fast__1)
+# Loading work.test(fast)
+# Loading work.system(fast)
+# Loading work.cpu_ram_if(fast__1)
+# Loading work.pipeline(fast)
+# Loading work.icache_sv_unit(fast)
+# Loading work.datapath_cache_if(fast__1)
+# Loading work.caches_if(fast__1)
+# Loading work.caches_if(fast__2)
+# Loading work.cache_control_if(fast__1)
+# Loading work.datapath(fast)
+# Loading work.register_file_if(fast__1)
+# Loading work.control_unit_if(fast__1)
+# Loading work.arithmetic_logic_if(fast__1)
+# Loading work.register_file_sv_unit(fast)
+# Loading work.register_file(fast)
+# Loading work.alu_sv_unit(fast)
+# Loading work.alu(fast)
+# Loading work.control_unit_sv_unit(fast)
+# Loading work.control_unit(fast)
+# Loading work.forwarding_unit_sv_unit(fast)
+# Loading work.forwarding_unit(fast)
+# Loading work.hazard_unit_sv_unit(fast)
+# Loading work.hazard_unit(fast)
+# Loading work.caches(fast)
+# Loading work.icache(fast)
+# Loading work.dcache(fast)
+# Loading work.memory_control(fast)
+# Loading work.ram(fast)
+# Loading altera_mf_ver.altsyncram(fast)
+# run -all
+# Starting Processor.
+# Halted at 472080 time and ran for      23603 cycles.
+# Starting memory dump.
+# Finished memory dump.
+# End time: 15:52:31 on Oct 21,2024, Elapsed time: 0:00:01
 # Errors: 0, Warnings: 18, Suppressed Errors: 1
-# Break key hit

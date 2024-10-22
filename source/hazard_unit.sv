@@ -30,7 +30,7 @@ module hazard_unit (
 
         PCWrite = 1;
         if_id_write = 1;
-        if(branch || jump || jalr || halt) begin
+        if(branch || jump || jalr) begin
           //  ex_flush = branch;
            // if_flush = 1'b1;
            // id_flush = 1'b1;
