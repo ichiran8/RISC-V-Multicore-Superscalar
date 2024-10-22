@@ -68,24 +68,6 @@ typedef struct packed {
 } mem_wb_t;
 
 mem_wb_t mem_wb;
-// logic next_stall;
-// always_ff @(posedge CLK, negedge nRST) begin
-//   if(!nRST) begin
-//     stall <= 1'b0;
-//   end else begin
-//     stall <= next_stall; //(id_ex.memread && ((id_ex.wsel == rfif.rsel1) || (id_ex.wsel == rfif.rsel2)));
-//   end
-// end
-
-// always_comb begin 
-//   next_stall = stall;
-//   if(!stall) begin
-//     next_stall = (id_ex.memread && ((id_ex.wsel == rfif.rsel1) || (id_ex.wsel == rfif.rsel2)));
-//   end else if (stall) begin
-//     next_stall = (ex_mem.memread && ((ex_mem.wsel == id_ex.rsel1) || (ex_mem.wsel == id_ex.rsel2)));
-//   end
-// end
-//assign stall = (ex_mem.memread && ((ex_mem.wsel == id_ex.rsel1) || (ex_mem.wsel == id_ex.rsel2)));
 // ********************* MISC *************************** //
 
 register_file rf(CLK, nRST, rfif);
@@ -182,7 +164,6 @@ assign aluif.rda = portA;
 assign aluif.rdb = (id_ex.alu_src) ? id_ex.imm_gen : portB;
 assign aluif.alu_op = id_ex.alu_op;
 
-
 // can straight up do this here
 word_t write_selected;
 
@@ -193,13 +174,22 @@ always_comb begin
     2'b01 : write_selected = id_ex.u_type;
   endcase
 end
+always_comb begin
+  branch = 1'b0;
+  casez(id_ex.branch_type)
+    2'd1 : branch = !((aluif.rda == aluif.rdb) ^ id_ex.zero); //((ex_mem.portA ^ ex_mem.portB) == 0) : ((ex_mem.portA ^ ex_mem.portB) != 32'b0);
+    2'd2 : branch = !(($signed(aluif.rda) >= $signed(aluif.rdb)) ^ id_ex.zero);//(ex_mem.zero) ? !($signed(ex_mem.portA) < $signed(ex_mem.portB)) : (($signed(ex_mem.portA) < $signed(ex_mem.portB)));
+    2'd3 : branch = !(($unsigned(aluif.rda) >= $unsigned(aluif.rdb)) ^ id_ex.zero);//(ex_mem.zero) ? !(($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB))) : (($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB)));
+  endcase
+end
 
 always_comb begin
     next_pc = pc + 4; // Don't know if I need this here tbh (no you don't)
-    if(branch) begin
-      next_pc = ex_mem.curr_pc + ex_mem.imm_gen; // this is calculated in the mem  stage
-    end else if (id_ex.jalr) begin
-       next_pc = aluif.result;
+    if(branch | id_ex.jalr) begin
+      casez({branch, id_ex.jalr})
+        2'd2 : next_pc = id_ex.curr_pc + id_ex.imm_gen;
+        2'd1 : next_pc = aluif.result;
+      endcase
     end else if (cif.jump) begin
       next_pc = if_id.curr_pc + cif.imm_gen;
     end
@@ -260,14 +250,14 @@ end
     end
   end
 
-always_comb begin
-  branch = 1'b0;
-  casez(ex_mem.branch_type)
-    2'd1 : branch = !((ex_mem.portA == ex_mem.portB) ^ ex_mem.zero); //((ex_mem.portA ^ ex_mem.portB) == 0) : ((ex_mem.portA ^ ex_mem.portB) != 32'b0);
-    2'd2 : branch = !(($signed(ex_mem.portA) >= $signed(ex_mem.portB)) ^ ex_mem.zero);//(ex_mem.zero) ? !($signed(ex_mem.portA) < $signed(ex_mem.portB)) : (($signed(ex_mem.portA) < $signed(ex_mem.portB)));
-    2'd3 : branch = !(($unsigned(ex_mem.portA) >= $unsigned(ex_mem.portB)) ^ ex_mem.zero);//(ex_mem.zero) ? !(($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB))) : (($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB)));
-  endcase
-end
+// always_comb begin
+//   branch = 1'b0;
+//   casez(ex_mem.branch_type)
+//     2'd1 : branch = !((ex_mem.portA == ex_mem.portB) ^ ex_mem.zero); //((ex_mem.portA ^ ex_mem.portB) == 0) : ((ex_mem.portA ^ ex_mem.portB) != 32'b0);
+//     2'd2 : branch = !(($signed(ex_mem.portA) >= $signed(ex_mem.portB)) ^ ex_mem.zero);//(ex_mem.zero) ? !($signed(ex_mem.portA) < $signed(ex_mem.portB)) : (($signed(ex_mem.portA) < $signed(ex_mem.portB)));
+//     2'd3 : branch = !(($unsigned(ex_mem.portA) >= $unsigned(ex_mem.portB)) ^ ex_mem.zero);//(ex_mem.zero) ? !(($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB))) : (($unsigned(ex_mem.portA) < $unsigned(ex_mem.portB)));
+//   endcase
+// end
 word_t load;
 assign load = (dpif.dhit & dpif.ihit) ? dpif.dmemload : ex_mem.dmemload;
 assign dpif.dmemstore = ex_mem.dmemstore; 

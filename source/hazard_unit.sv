@@ -22,7 +22,7 @@ module hazard_unit (
     always_comb begin : BRANCH_JUMP_HAZARDING
          if_flush = jump || halt || branch || jalr;
          id_flush = jalr || halt || branch;
-         ex_flush = branch;
+         ex_flush = 1'b0;
         //if_flush = 0;
         //id_flush = 0;
         //ex_flush = 0;
