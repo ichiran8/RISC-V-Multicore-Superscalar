@@ -48,6 +48,21 @@ logic next_dWEN;
 logic [31:0] next_daddr;
 logic [31:0] next_dstore;
 
+// Coherence signals
+logic next_ccwrite;
+logic next_cctrans;
+
+// snoopaddr[1:0]:
+// 00: ignore 
+// 01: snoop request {snoopaddr[31:2], 2'b00}
+// 10: evict (from write)
+
+// daddr[1:0]:
+// bit1: valid
+// bit0: dirty
+
+// ccwrite: set high when writing
+
 always_comb begin : NEXT_STATE_LOGIC
     next_state = state;
 
@@ -58,11 +73,9 @@ always_comb begin : NEXT_STATE_LOGIC
             else if((dpif.dmemREN | dpif.dmemWEN) && frame_select == 2'd0) begin
                 if(!frame[req.idx][lru[req.idx]].dirty) begin // clean
                     next_state = access1;
-                    // next_dREN = 1;
                 end
                 if(frame[req.idx][lru[req.idx]].dirty) begin // dirty
                     next_state = update1;
-                    // next_dWEN = 1;
                 end
             end
         end
@@ -70,7 +83,6 @@ always_comb begin : NEXT_STATE_LOGIC
         update2: begin 
             if(!ccif.dwait) begin
                 next_state = access1;
-                // next_dREN = 1;
             end
         end
         access1: begin 
@@ -79,12 +91,8 @@ always_comb begin : NEXT_STATE_LOGIC
                     next_state = request;
                 else begin
                     next_state = access2;
-                    // next_dREN = 1;
                 end
             end
-            // else
-                // next_dREN = 1;
-            // next_state = (!ccif.dwait & dpif.dmemWEN) ? request : !ccif.dwait ? access2 : state; 
         end
         access2: next_state = !ccif.dwait ? request : state;
         flush1: next_state = flush_timer == 5'd16 ? write_hits : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush2 : state; // flush first word
@@ -106,6 +114,8 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         ccif.dWEN <= 0;
         ccif.daddr <= '0;
         ccif.dstore <= '0;
+        ccif.ccwrite <= 0;
+        ccif.cctrans <= 0;
     end
     else begin
         frame <= next_frame;
@@ -118,13 +128,19 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         ccif.dWEN <= next_dWEN;
         ccif.daddr <= next_daddr;
         ccif.dstore <= next_dstore;
+        ccif.ccwrite <= next_ccwrite;
+        ccif.cctrans <= next_cctrans;
     end
 end
 
 always_comb begin : OUTPUT_LOGIC
     // To Controller
-    // ccif.daddr = 0;
-    // ccif.dstore = 0;
+    next_dREN = 0;
+    next_dWEN = 0;
+    next_daddr = '0;
+    next_dstore = '0;
+    next_ccwrite = 0;
+    next_cctrans = 0;
 
     // To Datapath
     dpif.dhit = 0;
@@ -136,10 +152,6 @@ always_comb begin : OUTPUT_LOGIC
     next_frame = frame;
     next_hit_counter = hit_counter;
     next_flush_timer = flush_timer;
-    next_dREN = 0;
-    next_dWEN = 0;
-    next_daddr = '0;
-    next_dstore = '0;
 
     case (state)
         request: begin
@@ -204,10 +216,14 @@ always_comb begin : OUTPUT_LOGIC
                next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
                next_dREN = 1;
                next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
+               
+               // here, make request to bus
             end
             else if(next_state == access1) begin
                next_dREN = 1;
                next_daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
+
+               // here, make request to bus
             end
         end
         access2: begin
@@ -224,6 +240,8 @@ always_comb begin : OUTPUT_LOGIC
             if(next_state == access2) begin
                next_dREN = 1;
                next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
+
+               // here, make request to bus
             end
         end
         flush1: begin
