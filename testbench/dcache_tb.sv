@@ -86,6 +86,7 @@ module dcache_tb;
 	.\dpif.dhit (dpif.dhit)
 	.\dpif.dmemload (dpif.dmemload)
 	.\dpif.flushed (dpif.flushed)
+	.\ccif.ccsnoopaddr (ccif.ccsnoopaddr)
 	.\nRST (nRST),
 	.\CPUCLK (CPUCLK)
   );
@@ -166,6 +167,8 @@ initial begin
 
 	ccif.iREN = 0;
 	ccif.iaddr = 0; // error with addr not updating!!! counterpart has to be 0
+	mc_cache_if.ccsnoopaddr = '0;
+	mc_cache_if.ccwait = 1;
 	
   reset_dut();
 
@@ -265,6 +268,27 @@ initial begin
   dpif.dmemWEN = 0;
   dpif.dmemstore = '0;
   dpif.dmemaddr = '0;
+
+  tb_test_num               += 1;
+  tb_test_case              = "Get a snoop with a tag match and give back data";
+
+	mc_cache_if.ccsnoopaddr = {32'd0, 32'b100001101}; // bottom two 01 = snoop_req
+
+  @(posedge CPUCLK);
+
+  mc_cache_if.ccwait[0] = 0;
+
+  @(posedge CPUCLK);
+
+  mc_cache_if.ccwait[0] = 1;
+
+  @(posedge CPUCLK);
+
+  mc_cache_if.ccwait[0] = 0;
+
+  @(posedge CPUCLK);
+
+  mc_cache_if.ccwait[0] = 1;
 
 	// to put some gap
   #(2 * PERIOD);

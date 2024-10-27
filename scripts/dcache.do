@@ -17,6 +17,9 @@ add wave -noupdate -group DCACHE -radix decimal /dcache_tb/DUT/next_hit_counter
 add wave -noupdate -group DCACHE /dcache_tb/DUT/state
 add wave -noupdate -group DCACHE /dcache_tb/DUT/next_state
 add wave -noupdate -group DCACHE /dcache_tb/DUT/flush_timer
+add wave -noupdate -group DCACHE /dcache_tb/DUT/snoop_req
+add wave -noupdate -group DCACHE /dcache_tb/DUT/snoop
+add wave -noupdate -group DCACHE /dcache_tb/DUT/snoop_select
 add wave -noupdate -group {DATAPATH SIGNALS} /dcache_tb/DUT/dpif/halt
 add wave -noupdate -group {DATAPATH SIGNALS} /dcache_tb/DUT/dpif/dhit
 add wave -noupdate -group {DATAPATH SIGNALS} /dcache_tb/DUT/dpif/dmemREN
@@ -43,6 +46,7 @@ add wave -noupdate -group {CONTROLLER SIGNALS} /dcache_tb/DUT/ccif/ccinv
 add wave -noupdate -group {CONTROLLER SIGNALS} /dcache_tb/DUT/ccif/ccwrite
 add wave -noupdate -group {CONTROLLER SIGNALS} /dcache_tb/DUT/ccif/cctrans
 add wave -noupdate -group {CONTROLLER SIGNALS} /dcache_tb/DUT/ccif/ccsnoopaddr
+add wave -noupdate -group {CONTROLLER SIGNALS} /dcache_tb/ccif/ccsnoopaddr
 add wave -noupdate -group RAM /dcache_tb/RAM/CLK
 add wave -noupdate -group RAM /dcache_tb/RAM/nRST
 add wave -noupdate -group RAM /dcache_tb/RAM/count
@@ -63,7 +67,7 @@ add wave -noupdate -group ramif /dcache_tb/RAM/ramif/memaddr
 add wave -noupdate -group ramif /dcache_tb/RAM/ramif/memstore
 add wave -noupdate /dcache_tb/DUT/prev_dhit
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {969168 ps} 0}
+WaveRestoreCursors {{Cursor 1} {441167 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 150
 configure wave -valuecolwidth 100
@@ -79,4 +83,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {1039500 ps}
+WaveRestoreZoom {262475 ps} {1301975 ps}
