@@ -14,7 +14,8 @@ typedef enum logic [3:0] {
 } state_t;
 state_t state, next_state;
 word_t [1:0] next_snoop_addr0, next_snoop_addr1;
-logic core, lru, next_core, next_lru, data_read, data_write, inst_read, core0_req, core1_req, next_ramREN, next_ramWEN, next_ramaddr, next_ramstore;
+logic core, lru, next_core, next_lru, data_read, data_write, inst_read, core0_req, core1_req, next_ramREN, next_ramWEN;
+word_t next_ramaddr, next_ramstore;
 
 assign data_read = cc.dREN[0] | cc.dREN[1];
 assign data_write = cc.dWEN[0] | cc.dWEN[1];
@@ -48,7 +49,8 @@ always_ff @(posedge CLK, negedge nRST) begin
        // cc.ccwait <= next_ccwait;;
     end
 end
-//assign cc.ccinv[!core] = cc.ccwrite[core]; // invalidate other core if current core is writing
+assign cc.ccinv[0] = cc.ccwrite[1]; // invalidate other core if current core is writing
+assign cc.ccinv[1] = cc.ccwrite[0]; // invalidate other core if current core is writing
 //assign cc.ccwait[!core] = cc.ccwrite[core]; // we need to notify when an invalidate can occur via ccwrite.
 // Priority read / readX >> WEN >> IREN
 // Then arbritrate priority based on cores? Not sure if it is supposed to arbritrate core requests first and THEN read? But that wouldn't make much sense
@@ -58,13 +60,15 @@ always_comb begin
     next_lru = lru;
     next_snoop_addr0 = 0;
     next_snoop_addr1 = 0;
-    cc.iwait = 1;
-    cc.dwait = 1;
+    cc.iwait = 2'b11;
+    cc.dwait = 2'b11;
     next_ramREN = 1'b0; //cc.ramREN;
     next_ramWEN = 1'b0; //cc.ramWEN;
     next_ramaddr = cc.ramaddr; //cc.ramaddr;
     next_ramstore = cc.ramstore;
     next_ccwait = cc.ccwait;
+    cc.iload = '0;
+    cc.dload = '0;
     casez(state)
         IDLE: begin
             if(data_read) begin // busRD or busRDX
@@ -82,13 +86,11 @@ always_comb begin
                         next_ccwait[0] = 1'b1;
                     end
                 end else if(cc.dREN[0]) begin // only 1 request so no need to check LRU; idk if I need to update LRU (probably should)
-                    next_state = SNOOP_REQ;
                     next_core = 0;
                     next_lru = (!lru) ? 1'b1 : 1'b0;
                     next_snoop_addr1 = {cc.daddr[0][31:2], 2'b01};
                     next_ccwait[1] = 1'b1;
                 end else if (cc.dREN[1]) begin
-                    next_state = SNOOP_REQ;
                     next_core = 1;
                     next_lru = lru ? 1'b0 : 1'b1;
                     next_snoop_addr0 = {cc.daddr[1][31:2], 2'b01};
@@ -110,13 +112,11 @@ always_comb begin
                         next_ccwait[0] = 1'b1;
                     end
                 end else if(cc.dWEN[0]) begin
-                    next_state = SNOOP_REQ;
                     next_core = 0;
                     next_lru = (!lru) ? 1'b1 : 1'b0;
                     next_ramaddr = {cc.daddr[0][31:2], 2'b00};
                     next_ccwait[1] = 1'b1;
                 end else if (cc.dWEN[1]) begin
-                    next_state = SNOOP_REQ;
                     next_core = 1;
                     next_lru = lru ? 1'b0 : 1'b1;
                     next_ramaddr = {cc.daddr[1][31:2], 2'b00};
@@ -129,25 +129,23 @@ always_comb begin
                     if(!lru) begin // take dREN[1]
                         next_core = 0;
                         next_lru = !lru;
-                        next_ramaddr = {cc.iaddr[0]};
+                        next_ramaddr = cc.iaddr[0];
                         next_ccwait[1] = 1'b1;
                     end else begin // take dREN [0]
                         next_core = 1;
                         next_lru = !lru;
-                        next_ramaddr = {cc.iaddr[1]};
+                        next_ramaddr = cc.iaddr[1];
                         next_ccwait[0] = 1'b1; 
                     end
                 end else if(cc.iREN[0]) begin
-                    next_state = SNOOP_REQ;
                     next_core = 0;
-                    next_ramaddr = {cc.iaddr[0]};
+                    next_ramaddr = cc.iaddr[0];
                     //next_lru = !lru;
                     next_lru = (!lru) ? 1'b1 : 1'b0;
                     next_ccwait[1] = 1'b1;
                 end else if (cc.iREN[1]) begin
-                    next_state = SNOOP_REQ;
                     next_core = 1;
-                    next_ramaddr = {cc.iaddr[1]};
+                    next_ramaddr = cc.iaddr[1];
                     //next_lru = !lru;
                     next_lru = lru ? 1'b0 : 1'b1;
                     next_ccwait[0] = 1'b1;
@@ -163,15 +161,15 @@ always_comb begin
                 next_state = IDLE;
                 next_ramREN = 1'b0;
                 next_ramaddr = '0;
-                cc.iwait = 1'b0;
-                cc.iload = cc.ramload;
+                cc.iwait[core] = 1'b0;
+                cc.iload[core] = cc.ramload;
             end
         end
         D_UPDATE_1: begin
             cc.dwait[core] = 1'b1;
             //cc.ramaddr = {cc.daddr[core][31:2], 2'b0};
             if(cc.ramstate == ACCESS) begin
-                cc.dwait = 1'b1;
+                cc.dwait[core] = 1'b1;
                 next_ramWEN = 1'b1;
                 next_state = D_UPDATE_2; // might update to a wait state 
                 next_ramaddr = {cc.daddr[core][31:2], 2'b0};
@@ -182,7 +180,7 @@ always_comb begin
             //cc.ramaddr = {cc.daddr[core][31:2], 2'b0};
             if(cc.ramstate == ACCESS) begin
                 next_ccwait[!core] = 1'b0;
-                cc.dwait = 1'b0;
+                cc.dwait[core] = 1'b0;
                 next_ramWEN = 1'b0;
                 next_state = IDLE;
                 next_ramaddr = 0;

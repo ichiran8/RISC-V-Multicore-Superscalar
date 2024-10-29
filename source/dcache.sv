@@ -92,8 +92,6 @@ always_comb begin : NEXT_STATE_LOGIC
                 end
                 else if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
                     next_state = bus_data1;
-
-                    // if(ccif.ccinv)
                 end
             end
             update1: next_state = !ccif.dwait ? update2 : state;
@@ -118,7 +116,8 @@ always_comb begin : NEXT_STATE_LOGIC
             bus_data2: next_state = !ccif.ccwait ? request : state; // for tb use
             flush1: next_state = flush_timer == 5'd16 ? write_hits : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush2 : state; // flush first word
             flush2: next_state = (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush1 : state; // flush second word
-            write_hits: next_state = !ccif.dwait ? terminate : state;
+            // write_hits: next_state = !ccif.dwait ? terminate : state;
+            write_hits: next_state = terminate;
             // terminate: stay in terminate, i think
         endcase
     end
@@ -175,7 +174,7 @@ always_comb begin : OUTPUT_LOGIC
     next_hit_counter = hit_counter;
     next_flush_timer = flush_timer;
 
-    if(!ccwait) begin
+    if(!ccif.ccwait) begin
         case (state)
             request: begin
                 if(dpif.dmemREN | dpif.dmemWEN) begin
@@ -296,9 +295,10 @@ always_comb begin : OUTPUT_LOGIC
             end
             write_hits: begin
                 if(next_state == write_hits) begin
-                    next_dstore = hit_counter;
-                    next_daddr = 32'h3100;
-                    next_dWEN = 1;
+                    // commented out for multicore
+                    // next_dstore = hit_counter;
+                    // next_daddr = 32'h3100;
+                    // next_dWEN = 1;
                 end
             end
             terminate: begin
@@ -316,7 +316,10 @@ always_comb begin : OUTPUT_LOGIC
         endcase
     end
     else begin
-        // invalidate here
+        if(ccif.ccinv) begin
+            if(snoop_select != 2'd0)
+                next_frame[snoop.idx][snoop_select[1]].valid = 0;
+        end
     end
 end
     

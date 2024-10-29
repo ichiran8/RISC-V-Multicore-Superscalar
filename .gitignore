@@ -4,6 +4,7 @@ fpga
 transcript
 Makefile
 modelsim.ini
+*diff
 *.wlf
 README
 *.swp
