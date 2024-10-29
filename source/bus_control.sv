@@ -2,7 +2,7 @@
 `include "cache_control_if.vh"
 import cpu_types_pkg::*;
 
-module bus_controller(
+module bus_control(
     input logic CLK, nRST,
     cache_control_if.cc cc
 );
@@ -160,6 +160,7 @@ always_comb begin
             next_ramREN = 1'b1;
             if(cc.ramstate == ACCESS) begin
                 next_ccwait[!core] = 1'b0; 
+                next_state = IDLE;
                 next_ramREN = 1'b0;
                 next_ramaddr = '0;
                 cc.iwait = 1'b0;
@@ -172,7 +173,7 @@ always_comb begin
             if(cc.ramstate == ACCESS) begin
                 cc.dwait = 1'b1;
                 next_ramWEN = 1'b1;
-                next_state = D_UPDATE_1; // might update to a wait state 
+                next_state = D_UPDATE_2; // might update to a wait state 
                 next_ramaddr = {cc.daddr[core][31:2], 2'b0};
             end
         end

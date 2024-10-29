@@ -30,7 +30,7 @@ interface cache_control_if(
   import cpu_types_pkg::*;
 
   // access with cpuid on each processor
-  parameter CPUS = 1; 
+  parameter CPUS = 2; 
 
   // arbitration
   logic   [CPUS-1:0]       iwait, dwait, iREN, dREN, dWEN;
