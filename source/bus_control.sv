@@ -10,18 +10,17 @@ module bus_control(
 // using cc trans as a confirmation (?)
 logic [1:0] next_ccwait;
 typedef enum logic [3:0] {
-    IDLE, IFETCH, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, CACHE_MEM_UPDATE_1, CACHE_MEM_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2
+    IDLE, IFETCH, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, INVALIDATE_STATE
 } state_t;
 state_t state, next_state;
-word_t [1:0] next_snoop_addr0, next_snoop_addr1;
+word_t [1:0] next_snoop_addr0, next_snoop_addr1, next_ramaddr, next_ramstore;
 logic core, lru, next_core, next_lru, data_read, data_write, inst_read, core0_req, core1_req, next_ramREN, next_ramWEN;
 word_t next_ramaddr, next_ramstore;
 
 assign data_read = cc.dREN[0] | cc.dREN[1];
 assign data_write = cc.dWEN[0] | cc.dWEN[1];
 assign inst_read = cc.iREN[0] | cc.iREN[1];
-//assign core0_req = dREN[0] | dWEN[0] | iREN[0];
-//assign core1_req = dREN[1] | dWEN[1] | iREN[1]; // might not be needed but I might rewrite it such that it will check to service which core (before arbitrating which action to take)
+assign invalidate_check = cc.ccwrite[0] | cc.ccwrite[1];
 always_ff @(posedge CLK, negedge nRST) begin
     if(!nRST) begin
         state <= IDLE;
@@ -49,8 +48,8 @@ always_ff @(posedge CLK, negedge nRST) begin
        // cc.ccwait <= next_ccwait;;
     end
 end
-assign cc.ccinv[0] = cc.ccwrite[1]; // invalidate other core if current core is writing
-assign cc.ccinv[1] = cc.ccwrite[0]; // invalidate other core if current core is writing
+//assign cc.ccinv[0] = cc.ccwrite[1]; // invalidate other core if current core is writing
+//assign cc.ccinv[1] = cc.ccwrite[0]; // invalidate other core if current core is writing
 //assign cc.ccwait[!core] = cc.ccwrite[core]; // we need to notify when an invalidate can occur via ccwrite.
 // Priority read / readX >> WEN >> IREN
 // Then arbritrate priority based on cores? Not sure if it is supposed to arbritrate core requests first and THEN read? But that wouldn't make much sense
@@ -69,34 +68,10 @@ always_comb begin
     next_ccwait = cc.ccwait;
     cc.iload = '0;
     cc.dload = '0;
+    cc.ccinv = 0;
     casez(state)
         IDLE: begin
-            if(data_read) begin // busRD or busRDX
-                next_state = SNOOP_REQ;
-                if(cc.dREN[0] && cc.dREN[1]) begin // basic case : basically if both of them have a request at the same time
-                    if(!lru) begin // take dREN[0] since it is least recently used
-                        next_core = 0;
-                        next_lru = !lru; // I only update LRU if they are both fighting over it? Might CHANGE *******
-                        next_snoop_addr1 = {cc.daddr[0][31:2], 2'b01};
-                        next_ccwait[1] = 1'b1;
-                    end else begin // take dREN [1] since it is least recently used
-                        next_core = 1;
-                        next_lru = !lru;
-                        next_snoop_addr0 = {cc.daddr[1][31:2], 2'b01};
-                        next_ccwait[0] = 1'b1;
-                    end
-                end else if(cc.dREN[0]) begin // only 1 request so no need to check LRU; idk if I need to update LRU (probably should)
-                    next_core = 0;
-                    next_lru = (!lru) ? 1'b1 : 1'b0;
-                    next_snoop_addr1 = {cc.daddr[0][31:2], 2'b01};
-                    next_ccwait[1] = 1'b1;
-                end else if (cc.dREN[1]) begin
-                    next_core = 1;
-                    next_lru = lru ? 1'b0 : 1'b1;
-                    next_snoop_addr0 = {cc.daddr[1][31:2], 2'b01};
-                    next_ccwait[0] = 1'b1;
-                end
-            end else if (data_write) begin // just a generic write back to memory if block is evicted from cache
+            if (data_write) begin // just a generic write back to memory if block is evicted from cache
                 next_state = D_UPDATE_1;
                 next_ramWEN = 1'b1;
                 if(cc.dWEN[0] && cc.dWEN[1]) begin // basic case
@@ -121,6 +96,47 @@ always_comb begin
                     next_lru = lru ? 1'b0 : 1'b1;
                     next_ramaddr = {cc.daddr[1][31:2], 2'b00};
                     next_ccwait[0] = 1'b1;
+                end
+            end else if(data_read) begin // busRD or busRDX
+                next_state = SNOOP_REQ;
+                if(cc.dREN[0] && cc.dREN[1]) begin // basic case : basically if both of them have a request at the same time
+                    if(!lru) begin // take dREN[0] since it is least recently used
+                        next_core = 0;
+                        next_lru = !lru; // I only update LRU if they are both fighting over it? Might CHANGE *******
+                        next_snoop_addr1 = {cc.daddr[0][31:2], 2'b01};
+                        next_ccwait[1] = 1'b1;
+                    end else begin // take dREN [1] since it is least recently used
+                        next_core = 1;
+                        next_lru = !lru;
+                        next_snoop_addr0 = {cc.daddr[1][31:2], 2'b01};
+                        next_ccwait[0] = 1'b1;
+                    end
+                end else if(cc.dREN[0]) begin // only 1 request so no need to check LRU; idk if I need to update LRU (probably should)
+                    next_core = 0;
+                    next_lru = (!lru) ? 1'b1 : 1'b0;
+                    next_snoop_addr1 = {cc.daddr[0][31:2], 2'b01};
+                    next_ccwait[1] = 1'b1;
+                end else if (cc.dREN[1]) begin
+                    next_core = 1;
+                    next_lru = lru ? 1'b0 : 1'b1;
+                    next_snoop_addr0 = {cc.daddr[1][31:2], 2'b01};
+                    next_ccwait[0] = 1'b1;
+                end
+            end else if (invalidate_check) begin
+                if(cc.ccwrite[0] && cc.ccwrite[1]) begin
+                    if(!lru) begin
+                        cc.ccinv[1] = cc.ccwrite[0];
+                        next_lru = !lru;
+                    end else begin
+                        cc.ccinv[0] = cc.ccwrite[1];
+                        next_lru = !lru;
+                    end
+                end else if (cc.ccwrite[0]) begin
+                    cc.ccinv[1] = cc.ccinv[0];
+                    next_lru = (!lru) ? 1'b1 : 1'b0; // if already 0, make it 1
+                end else if (cc.ccwrite[1]) begin
+                    cc.ccinv[0] = cc.ccinv[1];
+                    next_lru = lru ? 1'b0 : 1'b1;
                 end
             end else if (inst_read) begin // instruction read
                 next_state = IFETCH;
@@ -187,6 +203,7 @@ always_comb begin
             end
         end
         SNOOP_REQ: begin
+            cc.ccinv[!core] = cc.ccwrite[core];
             next_state = SNOOP_RESP;
         end
         SNOOP_RESP: begin
@@ -200,13 +217,9 @@ always_comb begin
                     next_ramREN = 1'b1;
                     next_ramaddr = cc.daddr[core];
                 end
-                2'b10 : next_state = CACHE_UPDATE_1;
-                2'b11 : begin
-                    next_state = CACHE_MEM_UPDATE_1;
-                    next_ramWEN = 1'b1;
-                    next_ramaddr = {cc.daddr[core][31:2], 2'b00};
-                    next_ramstore = cc.dstore[!core];
-                end
+                2'b10, 2'b11 : next_state = CACHE_UPDATE_1;
+              
+              
             endcase
         end
         
@@ -233,35 +246,6 @@ always_comb begin
                 next_state = IDLE;
                 next_ramaddr = 0;
                 cc.dwait[core] = 1'b0;
-            end
-        end
-        CACHE_MEM_UPDATE_1: begin  // update cache and mem because other cache is in MODIFIED state
-            cc.dload[core] = cc.dstore[!core];
-            next_ramWEN = 1'b1;
-            cc.dwait[core] = 1'b1;
-            cc.dwait[!core] = 1'b1;
-            if(cc.ramstate == ACCESS) begin
-                next_ramWEN = 1'b1;
-                next_state = CACHE_MEM_UPDATE_2;
-                cc.dwait[core] = 1'b0;
-                cc.dwait[!core] = 1'b0;
-                next_ramaddr = {cc.daddr[core][31:2], 2'b00};
-                next_ramstore = {cc.dstore[!core]};
-            end
-        end
-        CACHE_MEM_UPDATE_2: begin
-            cc.dload[core] = cc.dstore[!core];
-            next_ramWEN = 1'b1;
-            cc.dwait[core] = 1'b1;
-            cc.dwait[!core] = 1'b1;
-            if(cc.ramstate == ACCESS) begin
-                next_ccwait[!core] = 1'b0;
-                next_ramWEN = 1'b0;
-                next_state = IDLE;
-                cc.dwait[core] = 1'b0;
-                cc.dwait[!core] = 1'b0;
-                next_ramaddr = 0;
-                next_ramstore = 0;
             end
         end
         CACHE_UPDATE_1: begin  // update cache because other cache is in shared state
