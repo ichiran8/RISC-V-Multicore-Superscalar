@@ -13,7 +13,7 @@ typedef enum logic [3:0] {
     IDLE, IFETCH, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, INVALIDATE_STATE
 } state_t;
 state_t state, next_state;
-word_t [1:0] next_snoop_addr0, next_snoop_addr1, next_ramaddr, next_ramstore;
+word_t [1:0] next_snoop_addr0, next_snoop_addr1;
 logic core, lru, next_core, next_lru, data_read, data_write, inst_read, core0_req, core1_req, next_ramREN, next_ramWEN;
 word_t next_ramaddr, next_ramstore;
 
@@ -80,22 +80,26 @@ always_comb begin
                         next_lru = !lru;
                         next_ramaddr = {cc.daddr[0][31:2], 2'b00};
                         next_ccwait[1] = 1'b1;
+                        next_ramstore = cc.dstore[0];
                     end else begin // take dREN [0]
                         next_core = 1;
                         next_lru = !lru;
                         next_ramaddr = {cc.daddr[1][31:2], 2'b00};
                         next_ccwait[0] = 1'b1;
+                        next_ramstore = cc.dstore[1];
                     end
                 end else if(cc.dWEN[0]) begin
                     next_core = 0;
                     next_lru = (!lru) ? 1'b1 : 1'b0;
                     next_ramaddr = {cc.daddr[0][31:2], 2'b00};
                     next_ccwait[1] = 1'b1;
+                    next_ramstore = cc.dstore[0];
                 end else if (cc.dWEN[1]) begin
                     next_core = 1;
                     next_lru = lru ? 1'b0 : 1'b1;
                     next_ramaddr = {cc.daddr[1][31:2], 2'b00};
                     next_ccwait[0] = 1'b1;
+                    next_ramstore = cc.dstore[1];
                 end
             end else if(data_read) begin // busRD or busRDX
                 next_state = SNOOP_REQ;
@@ -189,6 +193,7 @@ always_comb begin
                 next_ramWEN = 1'b1;
                 next_state = D_UPDATE_2; // might update to a wait state 
                 next_ramaddr = {cc.daddr[core][31:2], 2'b0};
+                next_ramstore = cc.dstore[core];
             end
         end
         D_UPDATE_2: begin
