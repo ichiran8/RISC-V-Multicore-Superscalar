@@ -87,7 +87,7 @@ assign rfif.rsel2 = cif.rsel2; //dpif.dhit ? id_ex.rsel2 : cif.rsel2;
 
 always_ff @(posedge CLK, negedge nRST) begin
   if(!nRST) begin
-    pc <= '0;
+    pc <= PC_INIT;
   end else if (control_pipe & PCWrite) begin // include the dHit and iHit signals
     pc <= next_pc;//(ru.pc_enable) ? next_pc : pc;
   end

@@ -10,7 +10,7 @@ module bus_control(
 // using cc trans as a confirmation (?)
 logic [1:0] next_ccwait;
 typedef enum logic [3:0] {
-    IDLE, IFETCH, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, INVALIDATE_STATE
+    IDLE, IFETCH, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, INVALIDATE_STATE, WAIT_FETCH
 } state_t;
 state_t state, next_state;
 word_t [1:0] next_snoop_addr0, next_snoop_addr1;
@@ -126,7 +126,8 @@ always_comb begin
                     next_snoop_addr0 = {cc.daddr[1][31:2], 2'b01};
                     next_ccwait[0] = 1'b1;
                 end
-            end else if (invalidate_check) begin
+            end 
+            else if (invalidate_check) begin
                 if(cc.ccwrite[0] && cc.ccwrite[1]) begin
                     if(!lru) begin
                         cc.ccinv[1] = cc.ccwrite[0];
@@ -142,7 +143,8 @@ always_comb begin
                     cc.ccinv[0] = cc.ccinv[1];
                     next_lru = lru ? 1'b0 : 1'b1;
                 end
-            end else if (inst_read) begin // instruction read
+            end 
+            else if (inst_read) begin // instruction read
                 next_state = IFETCH;
                 next_ramREN = 1'b1;
                 if(cc.iREN[0] && cc.iREN[1]) begin // basic case
@@ -220,7 +222,7 @@ always_comb begin
                 2'b0? : begin 
                     next_state = MEM_FETCH_1;
                     next_ramREN = 1'b1;
-                    next_ramaddr = cc.daddr[core];
+                    next_ramaddr = {cc.daddr[core][31:2], 2'b00};
                 end
                 2'b10, 2'b11 : next_state = CACHE_UPDATE_1;
               
@@ -233,12 +235,18 @@ always_comb begin
             cc.dwait[core] = 1'b1;
             //cc.ramaddr = cc.daddr[core];
             if(cc.ramstate == ACCESS) begin
-                next_ramREN = 1'b1;
+                next_ramREN = 1'b0;
                 cc.dload[core] = cc.ramload;
-                next_state = MEM_FETCH_2;
+                next_state = WAIT_FETCH;
                 cc.dwait[core] = 1'b0;
-                next_ramaddr = {cc.daddr[core][31:2], 2'b01};
+                next_ramaddr = {cc.daddr[core][31:2], 2'b00};
             end
+        end
+        WAIT_FETCH: begin
+            cc.dwait[core] = 1'b1;
+            next_ramREN = 1'b1;
+            next_state = MEM_FETCH_2;
+            next_ramaddr = {cc.daddr[core][31:2], 2'b00};
         end
         MEM_FETCH_2: begin // update from mem because other cache is in Invalid state
         // some things to keep in mind is that data address needs to be updated for the other block, so it needs to communicate with the d cache to update

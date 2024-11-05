@@ -230,51 +230,51 @@ always_comb begin : OUTPUT_LOGIC
             end
             access1: begin
                 if(dpif.dmemWEN & next_state == request) begin
-                next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
-                next_frame[req.idx][lru[req.idx]].data[req.blkoff] = dpif.dmemstore;
-                next_frame[req.idx][lru[req.idx]].tag = req.tag;
-                next_frame[req.idx][lru[req.idx]].valid = 1;
-                next_frame[req.idx][lru[req.idx]].dirty = 1;
-                next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
+                    next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
+                    next_frame[req.idx][lru[req.idx]].data[req.blkoff] = dpif.dmemstore;
+                    next_frame[req.idx][lru[req.idx]].tag = req.tag;
+                    next_frame[req.idx][lru[req.idx]].valid = 1;
+                    next_frame[req.idx][lru[req.idx]].dirty = 1;
+                    next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
 
-                next_hit_counter = hit_counter - 1;
+                    next_hit_counter = hit_counter - 1;
 
-                //    next_ccwrite = 1; // check
+                    //    next_ccwrite = 1; // check
                 end
                 else if(next_state == access2) begin
-                next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
-                next_dREN = 1;
-                next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
-                
-                // here, make request to bus
+                    next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
+                    next_dREN = 1;
+                    next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
+                    
+                    // here, make request to bus
                 end
                 else if(next_state == access1) begin
-                next_dREN = 1;
-                next_daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
+                    next_dREN = 1;
+                    next_daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
 
-                // here, make request to bus
+                    // here, make request to bus
                 end
             end
             access2: begin
                 if(next_state == request) begin
-                next_frame[req.idx][lru[req.idx]].data[req.blkoff] = ccif.dload;
-                next_frame[req.idx][lru[req.idx]].tag = req.tag;
-                next_frame[req.idx][lru[req.idx]].valid = 1;
-                next_frame[req.idx][lru[req.idx]].dirty = 0; // if we got here, we should only be doing a read
-                next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
+                    next_frame[req.idx][lru[req.idx]].data[req.blkoff] = ccif.dload;
+                    next_frame[req.idx][lru[req.idx]].tag = req.tag;
+                    next_frame[req.idx][lru[req.idx]].valid = 1;
+                    next_frame[req.idx][lru[req.idx]].dirty = 0; // if we got here, we should only be doing a read
+                    next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
 
-                next_hit_counter = hit_counter - 1;
+                    next_hit_counter = hit_counter - 1;
                 end
 
                 if(next_state == access2) begin
-                next_dREN = 1;
-                next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
+                    next_dREN = 1;
+                    next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
 
-                // here, make request to bus
+                    // here, make request to bus
                 end
             end
             flush1: begin
-                if(flush_timer != 5'd16 & frame[flush_timer[2:0]][flush_timer[3]].dirty) begin
+                if(flush_timer != 5'd16 & frame[flush_timer[2:0]][flush_timer[3]].dirty & frame[flush_timer[2:0]][flush_timer[3]].valid) begin
                     if(next_state == flush1) begin // right now has extra cycle delay, but otherwise could write when not supposed to
                         next_dWEN = 1;
                         next_dstore = frame[flush_timer[2:0]][flush_timer[3]].data[0];
@@ -283,7 +283,7 @@ always_comb begin : OUTPUT_LOGIC
                 end
             end
             flush2: begin
-                if(frame[flush_timer[2:0]][flush_timer[3]].dirty) begin
+                if(frame[flush_timer[2:0]][flush_timer[3]].dirty & frame[flush_timer[2:0]][flush_timer[3]].valid) begin
                     if(next_state == flush2) begin
                         next_dWEN = 1;
                         next_dstore = frame[flush_timer[2:0]][flush_timer[3]].data[1];
