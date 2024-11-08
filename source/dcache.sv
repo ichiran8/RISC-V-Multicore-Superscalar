@@ -70,9 +70,6 @@ assign snoop_select = (frame[snoop.idx][1].tag == snoop.tag & frame[snoop.idx][1
 // bit1: valid
 // bit0: dirty
 
-// ccwrite: set high when writing
-// ccinv: we need to set valid=0 when we get this, also need ccwait
-
 always_comb begin : NEXT_STATE_LOGIC
     next_state = state;
 
@@ -110,9 +107,9 @@ always_comb begin : NEXT_STATE_LOGIC
             end
             access2: next_state = !ccif.dwait ? request : state;
             bus_data1: next_state = !ccif.dwait ? bus_data2 : state; // for actual use
-            // bus_data1: next_state = !ccif.ccwait ? bus_data2 : state; // for tb use
+            //bus_data1: next_state = !ccif.ccwait ? bus_data2 : state; // for tb use
             bus_data2: next_state = !ccif.dwait ? request : state; // for actual use
-            // bus_data2: next_state = !ccif.ccwait ? request : state; // for tb use
+            //bus_data2: next_state = !ccif.ccwait ? request : state; // for tb use
             flush1: next_state = flush_timer == 5'd16 ? write_hits : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty | !frame[flush_timer[2:0]][flush_timer[3]].valid) ? flush2 : state; // flush first word
             flush2: next_state = (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty | !frame[flush_timer[2:0]][flush_timer[3]].valid) ? flush1 : state; // flush second word
             // write_hits: next_state = !ccif.dwait ? terminate : state;
@@ -205,6 +202,7 @@ always_comb begin : OUTPUT_LOGIC
                 if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
                     next_daddr[1:0] = {frame[snoop.idx][snoop_select[1]].valid, frame[snoop.idx][snoop_select[1]].dirty}; 
                     next_dstore = frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
+
                 end
                 if(next_state == flush1)
                     next_cctrans = 1;
@@ -314,10 +312,8 @@ always_comb begin : OUTPUT_LOGIC
                 // no need for hit_counter in multicore
                 // don't update lru
 
-                next_dstore = frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
+                next_dstore = (next_state == bus_data2) ? frame[snoop.idx][snoop_select[1]].data[!snoop.blkoff] : frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
                 
-                if(next_state == bus_data2)
-                    next_dstore = frame[snoop.idx][snoop_select[1]].data[!snoop.blkoff];
             end
             bus_data2: begin
                 next_dstore = frame[snoop.idx][snoop_select[1]].data[!snoop.blkoff];
@@ -327,6 +323,8 @@ always_comb begin : OUTPUT_LOGIC
     else begin
         if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
             next_daddr[1:0] = {frame[snoop.idx][snoop_select[1]].valid, frame[snoop.idx][snoop_select[1]].dirty}; 
+            next_dstore = frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
+
         end
         if(ccif.ccinv) begin
             if(snoop_select != 2'd0)

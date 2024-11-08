@@ -71,6 +71,8 @@ always_comb begin
     cc.iload = '0;
     cc.dload = '0;
     cc.ccinv = 0;
+    //cc.ccinv[0] = cc.cctrans[1];
+    //cc.ccinv[1] = cc.cctrans[0];
     cc.ccwait[0] = cc.cctrans[1] ? 1'b1 : 1'b0;
     cc.ccwait[1] = cc.cctrans[0] ? 1'b1 : 1'b0;
     casez(state)
@@ -95,13 +97,13 @@ always_comb begin
                     end
                 end else if(cc.dWEN[0]) begin
                     next_core = 0;
-                    next_lru = (!lru) ? 1'b1 : 1'b0;
+                    next_lru = 1'b1;//(!lru) ? 1'b1 : 1'b0;
                     next_ramaddr = {cc.daddr[0][31:2], 2'b00};
                     //next_ccwait[1] = 1'b1;
                     next_ramstore = cc.dstore[0];
                 end else if (cc.dWEN[1]) begin
                     next_core = 1;
-                    next_lru = lru ? 1'b0 : 1'b1;
+                    next_lru = 1'b0;//lru ? 1'b0 : 1'b1;
                     next_ramaddr = {cc.daddr[1][31:2], 2'b00};
                    // next_ccwait[0] = 1'b1;
                     next_ramstore = cc.dstore[1];
@@ -125,12 +127,12 @@ always_comb begin
                 end 
                 else if(cc.dREN[0]) begin // only 1 request so no need to check LRU; idk if I need to update LRU (probably should)
                     next_core = 0;
-                    next_lru = (!lru) ? 1'b1 : 1'b0;
+                    next_lru = 1'b1; //(!lru) ? 1'b1 : 1'b0;
                     next_snoop_addr1 = {cc.daddr[0][31:2], 2'b01};
                    // next_ccwait[1] = 1'b1;
                 end else if (cc.dREN[1]) begin
                     next_core = 1;
-                    next_lru = lru ? 1'b0 : 1'b1;
+                    next_lru = 1'b0;//lru ? 1'b0 : 1'b1;
                     next_snoop_addr0 = {cc.daddr[1][31:2], 2'b01};
                   //  next_ccwait[0] = 1'b1;
                 end
@@ -151,12 +153,12 @@ always_comb begin
                     end
                 end else if (cc.ccwrite[0]) begin
                     cc.ccinv[1] = 1'b1; //cc.ccinv[0];
-                    next_lru = (!lru) ? 1'b1 : 1'b0; // if already 0, make it 1
+                    next_lru = 1'b1;//(!lru) ? 1'b1 : 1'b0; // if already 0, make it 1
                     cc.ccwait[1] = 1'b1;
                     next_snoop_addr1 = {cc.daddr[0][31:2], 2'b00};
                 end else if (cc.ccwrite[1]) begin
                     cc.ccinv[0] = 1'b1; //cc.ccinv[1];
-                    next_lru = lru ? 1'b0 : 1'b1;
+                    next_lru = 1'b0; //lru ? 1'b0 : 1'b1;
                     cc.ccwait[0] = 1'b1;
                     next_snoop_addr0 = {cc.daddr[1][31:2], 2'b00};
                 end
@@ -181,13 +183,13 @@ always_comb begin
                     next_core = 0;
                     next_ramaddr = cc.iaddr[0];
                     //next_lru = !lru;
-                    next_lru = (!lru) ? 1'b1 : 1'b0;
+                    next_lru = 1'b1; //(!lru) ? 1'b1 : 1'b0;
                    // next_ccwait[1] = 1'b1;
                 end else if (cc.iREN[1]) begin
                     next_core = 1;
                     next_ramaddr = cc.iaddr[1];
                     //next_lru = !lru;
-                    next_lru = lru ? 1'b0 : 1'b1;
+                    next_lru = 1'b0; //lru ? 1'b0 : 1'b1;
                    // next_ccwait[0] = 1'b1;
                 end
             end
@@ -207,6 +209,7 @@ always_comb begin
         end
         D_UPDATE_1: begin
             cc.dwait[core] = 1'b1;
+            next_ramWEN = 1'b1;
             //cc.ramaddr = {cc.daddr[core][31:2], 2'b0};
             if(cc.ramstate == ACCESS) begin
                 cc.dwait[core] = 1'b0;
@@ -217,6 +220,7 @@ always_comb begin
             end
         end
         WAIT_MEM : begin
+
             if(cc.dWEN[core]) begin
                 next_state = D_UPDATE_2;
                 cc.dwait[core] = 1'b1;
@@ -256,14 +260,14 @@ always_comb begin
                 end
                 2'b10 : begin
                     next_state = CACHE_UPDATE_1;
-                    // cc.dwait[!core] = 1'b0;
+                    //cc.dwait[!core] = 1'b0;
                 end
                 2'b11 : begin 
                     next_state = CACHE_MEM_UPDATE_1;
                     next_ramWEN = 1'b1;
                     next_ramaddr = {cc.daddr[core][31:2], 2'b00};
                     next_ramstore = cc.dstore[!core];
-                    // cc.dwait[!core] = 1'b0;
+                    //cc.dwait[!core] = 1'b0;
                 end
             endcase
         end
@@ -294,7 +298,7 @@ always_comb begin
                // next_ccwait[!core] = 1'b0;
                 next_ramREN = 1'b0;
                 cc.dload[core] = cc.ramload;
-                next_state = IDLE;
+                next_state = CACHE_INVALIDATE;
                 next_ramaddr = 0;
                 cc.dwait[core] = 1'b0;
             end
@@ -334,7 +338,7 @@ always_comb begin
         end
         CACHE_UPDATE_2: begin
            // next_ccwait[!core] = 1'b0;
-            cc.dwait[core] = 2'b0;
+            cc.dwait = 2'b0;
             cc.dload[core] = cc.dstore[!core];
             next_state = IDLE;
         end
