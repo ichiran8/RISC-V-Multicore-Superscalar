@@ -109,10 +109,10 @@ always_comb begin : NEXT_STATE_LOGIC
                 end
             end
             access2: next_state = !ccif.dwait ? request : state;
-            // bus_data1: next_state = !ccif.dwait ? bus_data2 : state; // for actual use
-            bus_data1: next_state = !ccif.ccwait ? bus_data2 : state; // for tb use
-            // bus_data2: next_state = !ccif.dwait ? request : state; // for actual use
-            bus_data2: next_state = !ccif.ccwait ? request : state; // for tb use
+            bus_data1: next_state = !ccif.dwait ? bus_data2 : state; // for actual use
+            // bus_data1: next_state = !ccif.ccwait ? bus_data2 : state; // for tb use
+            bus_data2: next_state = !ccif.dwait ? request : state; // for actual use
+            // bus_data2: next_state = !ccif.ccwait ? request : state; // for tb use
             flush1: next_state = flush_timer == 5'd16 ? write_hits : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty | !frame[flush_timer[2:0]][flush_timer[3]].valid) ? flush2 : state; // flush first word
             flush2: next_state = (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty | !frame[flush_timer[2:0]][flush_timer[3]].valid) ? flush1 : state; // flush second word
             // write_hits: next_state = !ccif.dwait ? terminate : state;
@@ -204,6 +204,7 @@ always_comb begin : OUTPUT_LOGIC
                 end
                 if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
                     next_daddr[1:0] = {frame[snoop.idx][snoop_select[1]].valid, frame[snoop.idx][snoop_select[1]].dirty}; 
+                    next_dstore = frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
                 end
                 if(next_state == flush1)
                     next_cctrans = 1;
@@ -314,6 +315,9 @@ always_comb begin : OUTPUT_LOGIC
                 // don't update lru
 
                 next_dstore = frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
+                
+                if(next_state == bus_data2)
+                    next_dstore = frame[snoop.idx][snoop_select[1]].data[!snoop.blkoff];
             end
             bus_data2: begin
                 next_dstore = frame[snoop.idx][snoop_select[1]].data[!snoop.blkoff];

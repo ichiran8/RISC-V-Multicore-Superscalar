@@ -254,15 +254,17 @@ always_comb begin
                     next_ramREN = 1'b1;
                     next_ramaddr = {cc.daddr[core][31:2], 2'b00};
                 end
-                2'b10 : next_state = CACHE_UPDATE_1;
+                2'b10 : begin
+                    next_state = CACHE_UPDATE_1;
+                    // cc.dwait[!core] = 1'b0;
+                end
                 2'b11 : begin 
                     next_state = CACHE_MEM_UPDATE_1;
                     next_ramWEN = 1'b1;
                     next_ramaddr = {cc.daddr[core][31:2], 2'b00};
                     next_ramstore = cc.dstore[!core];
+                    // cc.dwait[!core] = 1'b0;
                 end
-              
-              
             endcase
         end
         
@@ -326,15 +328,13 @@ always_comb begin
         end
         CACHE_UPDATE_1: begin  // update cache because other cache is in shared state
             // might need an acknowledgement signal to transition
-            cc.dwait[core] = 1'b0;
-            cc.dwait[!core] = 1'b0;
+            cc.dwait = 2'b0;
             cc.dload[core] = cc.dstore[!core];
             next_state = CACHE_UPDATE_2;
         end
         CACHE_UPDATE_2: begin
            // next_ccwait[!core] = 1'b0;
-            cc.dwait[core] = 1'b0;
-            cc.dwait[!core] = 1'b0;
+            cc.dwait[core] = 2'b0;
             cc.dload[core] = cc.dstore[!core];
             next_state = IDLE;
         end
