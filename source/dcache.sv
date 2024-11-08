@@ -32,7 +32,6 @@ logic [31:0] hit_counter;
 logic [31:0] next_hit_counter;
 
 logic prev_dhit;
-logic[7:0][1:0] dirty_bits;
 
 logic[4:0] flush_timer;
 logic[4:0] next_flush_timer;
@@ -114,8 +113,8 @@ always_comb begin : NEXT_STATE_LOGIC
             bus_data1: next_state = !ccif.ccwait ? bus_data2 : state; // for tb use
             // bus_data2: next_state = !ccif.dwait ? request : state; // for actual use
             bus_data2: next_state = !ccif.ccwait ? request : state; // for tb use
-            flush1: next_state = flush_timer == 5'd16 ? write_hits : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush2 : state; // flush first word
-            flush2: next_state = (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty) ? flush1 : state; // flush second word
+            flush1: next_state = flush_timer == 5'd16 ? write_hits : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty | !frame[flush_timer[2:0]][flush_timer[3]].valid) ? flush2 : state; // flush first word
+            flush2: next_state = (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty | !frame[flush_timer[2:0]][flush_timer[3]].valid) ? flush1 : state; // flush second word
             // write_hits: next_state = !ccif.dwait ? terminate : state;
             write_hits: next_state = terminate;
             // terminate: stay in terminate, i think
@@ -174,6 +173,8 @@ always_comb begin : OUTPUT_LOGIC
     next_hit_counter = hit_counter;
     next_flush_timer = flush_timer;
 
+    next_ccwrite = !ccif.ccwait ? dpif.dmemWEN : 0;
+
     if(!ccif.ccwait) begin
         case (state)
             request: begin
@@ -192,18 +193,20 @@ always_comb begin : OUTPUT_LOGIC
                             next_frame[req.idx][frame_select[1]].dirty = 1;
                             next_frame[req.idx][frame_select[1]].valid = 1;
 
-                            next_ccwrite = 1; // check, might be enough without at access1
+                            // next_ccwrite = 1; // check, might be enough without at access1
                         end
                     end
-                end
-                if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
-                    next_daddr[1:0] = {frame[snoop.idx][1].valid, frame[snoop.idx][1].dirty}; 
                 end
                 if(next_state == update1) begin
                     next_dWEN = 1;
                     next_dstore = frame[req.idx][lru[req.idx]].data[0];
                     next_daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b0, req.bytoff}; // check this
                 end
+                if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
+                    next_daddr[1:0] = {frame[snoop.idx][snoop_select[1]].valid, frame[snoop.idx][snoop_select[1]].dirty}; 
+                end
+                if(next_state == flush1)
+                    next_cctrans = 1;
             end
             update1: begin
                 if(next_state == update1) begin
@@ -239,7 +242,7 @@ always_comb begin : OUTPUT_LOGIC
 
                     next_hit_counter = hit_counter - 1;
 
-                    //    next_ccwrite = 1; // check
+                    // next_ccwrite = 1; // check
                 end
                 else if(next_state == access2) begin
                     next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
@@ -274,6 +277,7 @@ always_comb begin : OUTPUT_LOGIC
                 end
             end
             flush1: begin
+                next_cctrans = 1;
                 if(flush_timer != 5'd16 & frame[flush_timer[2:0]][flush_timer[3]].dirty & frame[flush_timer[2:0]][flush_timer[3]].valid) begin
                     if(next_state == flush1) begin // right now has extra cycle delay, but otherwise could write when not supposed to
                         next_dWEN = 1;
@@ -283,6 +287,7 @@ always_comb begin : OUTPUT_LOGIC
                 end
             end
             flush2: begin
+                next_cctrans = 1;
                 if(frame[flush_timer[2:0]][flush_timer[3]].dirty & frame[flush_timer[2:0]][flush_timer[3]].valid) begin
                     if(next_state == flush2) begin
                         next_dWEN = 1;
@@ -316,6 +321,9 @@ always_comb begin : OUTPUT_LOGIC
         endcase
     end
     else begin
+        if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
+            next_daddr[1:0] = {frame[snoop.idx][snoop_select[1]].valid, frame[snoop.idx][snoop_select[1]].dirty}; 
+        end
         if(ccif.ccinv) begin
             if(snoop_select != 2'd0)
                 next_frame[snoop.idx][snoop_select[1]].valid = 0;

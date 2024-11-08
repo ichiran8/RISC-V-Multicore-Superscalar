@@ -183,7 +183,6 @@ add wave -noupdate -group {DCACHE 0} /system_tb/DUT/CPU/CM0/DCACHE/next_lru
 add wave -noupdate -group {DCACHE 0} /system_tb/DUT/CPU/CM0/DCACHE/hit_counter
 add wave -noupdate -group {DCACHE 0} /system_tb/DUT/CPU/CM0/DCACHE/next_hit_counter
 add wave -noupdate -group {DCACHE 0} /system_tb/DUT/CPU/CM0/DCACHE/prev_dhit
-add wave -noupdate -group {DCACHE 0} /system_tb/DUT/CPU/CM0/DCACHE/dirty_bits
 add wave -noupdate -group {DCACHE 0} /system_tb/DUT/CPU/CM0/DCACHE/flush_timer
 add wave -noupdate -group {DCACHE 0} /system_tb/DUT/CPU/CM0/DCACHE/next_flush_timer
 add wave -noupdate -group {DCACHE 0} /system_tb/DUT/CPU/CM0/DCACHE/state
@@ -219,7 +218,6 @@ add wave -noupdate -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/next_lru
 add wave -noupdate -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/hit_counter
 add wave -noupdate -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/next_hit_counter
 add wave -noupdate -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/prev_dhit
-add wave -noupdate -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/dirty_bits
 add wave -noupdate -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/flush_timer
 add wave -noupdate -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/next_flush_timer
 add wave -noupdate -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/state
@@ -256,7 +254,7 @@ add wave -noupdate -group RAM /system_tb/DUT/RAM/ramif/memWEN
 add wave -noupdate -group RAM /system_tb/DUT/RAM/ramif/memaddr
 add wave -noupdate -group RAM /system_tb/DUT/RAM/ramif/memstore
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {183293 ps} 0}
+WaveRestoreCursors {{Cursor 1} {4215938 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 150
 configure wave -valuecolwidth 100
@@ -272,4 +270,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {0 ps} {682 ns}
+WaveRestoreZoom {3859 ns} {4541 ns}

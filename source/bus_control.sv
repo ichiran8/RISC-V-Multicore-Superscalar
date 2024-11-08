@@ -12,10 +12,10 @@ module bus_control(
 // using cc trans as a confirmation (?)
 logic [1:0] next_ccwait;
 typedef enum logic [3:0] {
-    IDLE, IFETCH, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, CACHE_MEM_UPDATE_1, CACHE_MEM_UPDATE_2, CACHE_INVALIDATE, WAIT_FETCH
+    IDLE, IFETCH, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, CACHE_MEM_UPDATE_1, CACHE_MEM_UPDATE_2, CACHE_INVALIDATE, WAIT_FETCH, WAIT_MEM
 } state_t;
 state_t state, next_state;
-word_t [1:0] next_snoop_addr0, next_snoop_addr1;
+word_t next_snoop_addr0, next_snoop_addr1;
 logic core, lru, next_core, next_lru, data_read, data_write, inst_read, core0_req, core1_req, next_ramREN, next_ramWEN, invalidate_check;
 word_t next_ramaddr, next_ramstore;
 
@@ -59,8 +59,8 @@ always_comb begin
     next_state = state;
     next_core = core;
     next_lru = lru;
-    next_snoop_addr0 = 0;
-    next_snoop_addr1 = 0;
+    next_snoop_addr0 = cc.ccsnoopaddr[0];
+    next_snoop_addr1 = cc.ccsnoopaddr[1];
     cc.iwait = 2'b11;
     cc.dwait = 2'b11;
     next_ramREN = 1'b0; //cc.ramREN;
@@ -71,31 +71,11 @@ always_comb begin
     cc.iload = '0;
     cc.dload = '0;
     cc.ccinv = 0;
-    cc.ccwait = 0;
+    cc.ccwait[0] = cc.cctrans[1] ? 1'b1 : 1'b0;
+    cc.ccwait[1] = cc.cctrans[0] ? 1'b1 : 1'b0;
     casez(state)
-        IDLE: begin
-            if (invalidate_check) begin
-                next_lru = !lru;
-                if(cc.ccwrite[0] && cc.ccwrite[1]) begin
-                    if(!lru) begin
-                        cc.ccinv[1] = 1'b1;//cc.ccwrite[0];
-                        //next_lru = !lru;
-                            cc.ccwait[1] = 1'b1;
-                    end else begin
-                        cc.ccinv[0] = 1'b1; //cc.ccwrite[1];
-                        //next_lru = !lru;
-                        cc.ccwait[0] = 1'b1;
-                    end
-                end else if (cc.ccwrite[0]) begin
-                    cc.ccinv[1] = 1'b1; //cc.ccinv[0];
-                    next_lru = (!lru) ? 1'b1 : 1'b0; // if already 0, make it 1
-                    cc.ccwait[1] = 1'b1;
-                end else if (cc.ccwrite[1]) begin
-                    cc.ccinv[0] = 1'b1; //cc.ccinv[1];
-                    next_lru = lru ? 1'b0 : 1'b1;
-                    cc.ccwait[0] = 1'b1;
-                end
-            end else if (data_write) begin // just a generic write back to memory if block is evicted from cache
+        IDLE: begin 
+            if (data_write) begin // just a generic write back to memory if block is evicted from cache
                 next_state = D_UPDATE_1;
                 next_ramWEN = 1'b1;
                 if(cc.dWEN[0] && cc.dWEN[1]) begin // basic case
@@ -104,7 +84,7 @@ always_comb begin
                         next_core = 0;
                         //next_lru = !lru;
                         next_ramaddr = {cc.daddr[0][31:2], 2'b00};
-                        next_ccwait[1] = 1'b1;
+                        // next_ccwait[1] = 1'b1;
                         next_ramstore = cc.dstore[0];
                     end else begin // take dREN [0]
                         next_core = 1;
@@ -126,7 +106,8 @@ always_comb begin
                    // next_ccwait[0] = 1'b1;
                     next_ramstore = cc.dstore[1];
                 end
-            end else if(data_read) begin // busRD or busRDX
+            end 
+            else if(data_read) begin // busRD or busRDX
                 next_state = SNOOP_REQ;
                 if(cc.dREN[0] && cc.dREN[1]) begin // basic case : basically if both of them have a request at the same time
                     next_lru = !lru;
@@ -141,7 +122,8 @@ always_comb begin
                         next_snoop_addr0 = {cc.daddr[1][31:2], 2'b01};
                        // next_ccwait[0] = 1'b1;
                     end
-                end else if(cc.dREN[0]) begin // only 1 request so no need to check LRU; idk if I need to update LRU (probably should)
+                end 
+                else if(cc.dREN[0]) begin // only 1 request so no need to check LRU; idk if I need to update LRU (probably should)
                     next_core = 0;
                     next_lru = (!lru) ? 1'b1 : 1'b0;
                     next_snoop_addr1 = {cc.daddr[0][31:2], 2'b01};
@@ -151,6 +133,32 @@ always_comb begin
                     next_lru = lru ? 1'b0 : 1'b1;
                     next_snoop_addr0 = {cc.daddr[1][31:2], 2'b01};
                   //  next_ccwait[0] = 1'b1;
+                end
+            end 
+            else if (invalidate_check) begin
+                next_lru = !lru;
+                if(cc.ccwrite[0] && cc.ccwrite[1]) begin
+                    if(!lru) begin
+                        cc.ccinv[1] = 1'b1;//cc.ccwrite[0];
+                        //next_lru = !lru;
+                        cc.ccwait[1] = 1'b1;
+                        next_snoop_addr1 = {cc.daddr[0][31:2], 2'b00};
+                    end else begin
+                        cc.ccinv[0] = 1'b1; //cc.ccwrite[1];
+                        //next_lru = !lru;
+                        cc.ccwait[0] = 1'b1;
+                        next_snoop_addr0 = {cc.daddr[1][31:2], 2'b00};
+                    end
+                end else if (cc.ccwrite[0]) begin
+                    cc.ccinv[1] = 1'b1; //cc.ccinv[0];
+                    next_lru = (!lru) ? 1'b1 : 1'b0; // if already 0, make it 1
+                    cc.ccwait[1] = 1'b1;
+                    next_snoop_addr1 = {cc.daddr[0][31:2], 2'b00};
+                end else if (cc.ccwrite[1]) begin
+                    cc.ccinv[0] = 1'b1; //cc.ccinv[1];
+                    next_lru = lru ? 1'b0 : 1'b1;
+                    cc.ccwait[0] = 1'b1;
+                    next_snoop_addr0 = {cc.daddr[1][31:2], 2'b00};
                 end
             end 
             else if (inst_read) begin // instruction read
@@ -201,15 +209,25 @@ always_comb begin
             cc.dwait[core] = 1'b1;
             //cc.ramaddr = {cc.daddr[core][31:2], 2'b0};
             if(cc.ramstate == ACCESS) begin
+                cc.dwait[core] = 1'b0;
+                next_ramWEN = 1'b0;
+                next_state = WAIT_MEM; // might update to a wait state 
+                next_ramaddr = {cc.daddr[core][31:2], 2'b0};
+                next_ramstore = cc.dstore[core];
+            end
+        end
+        WAIT_MEM : begin
+            if(cc.dWEN[core]) begin
+                next_state = D_UPDATE_2;
                 cc.dwait[core] = 1'b1;
-                next_ramWEN = 1'b1;
-                next_state = D_UPDATE_2; // might update to a wait state 
+                next_ramWEN = 1'b1;  
                 next_ramaddr = {cc.daddr[core][31:2], 2'b0};
                 next_ramstore = cc.dstore[core];
             end
         end
         D_UPDATE_2: begin
             cc.dwait[core] = 1'b1;
+            next_ramWEN = 1'b1;
             //cc.ramaddr = {cc.daddr[core][31:2], 2'b0};
             if(cc.ramstate == ACCESS) begin
               //  next_ccwait[!core] = 1'b0;
@@ -228,6 +246,8 @@ always_comb begin
             // We can do this here after we get the response (MSI)
             // I need to discuss about dcache because daddr[core][1:0] represents the MSI 
             // I would also need to hold ccwrite[core] high for a certain amount of time so discussion about dcache needs to take place
+            next_snoop_addr1 = {cc.ccsnoopaddr[1][31:2], 2'b00};
+            next_snoop_addr0 = {cc.ccsnoopaddr[0][31:2], 2'b00};
             casez({cc.daddr[!core][1:0]})
                 2'b0? : begin 
                     next_state = MEM_FETCH_1;
@@ -280,18 +300,23 @@ always_comb begin
         CACHE_MEM_UPDATE_1: begin  // update cache and mem because other cache is in MODIFIED state
             cc.dload[core] = cc.dstore[!core];
             next_ramWEN = 1'b1;
+            cc.dwait = 2'b11;
             if(cc.ramstate == ACCESS) begin
                 next_state = CACHE_MEM_UPDATE_2;
                 next_ramaddr = {cc.daddr[core][31:2], 2'b00};
                 next_ramstore = {cc.dstore[!core]};
+                cc.dwait = 2'b00;
+
             end
         end
         CACHE_MEM_UPDATE_2: begin
             cc.dload[core] = cc.dstore[!core];
             next_ramWEN = 1'b1;
+            cc.dwait = 2'b11;
             if(cc.ramstate == ACCESS) begin
                 next_ramWEN = 1'b0;
                 next_state = CACHE_INVALIDATE;
+                cc.dwait = 2'b00;
             end
         end
         CACHE_INVALIDATE : begin
