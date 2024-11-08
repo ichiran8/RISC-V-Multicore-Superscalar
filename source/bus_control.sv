@@ -12,11 +12,11 @@ module bus_control(
 // using cc trans as a confirmation (?)
 logic [1:0] next_ccwait;
 typedef enum logic [3:0] {
-    IDLE, IFETCH, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, CACHE_MEM_UPDATE1, CACHE_MEM_UPDATE2, CACHE_INVALIDATE, INVALIDATE_STATE, WAIT_FETCH
+    IDLE, IFETCH, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, CACHE_MEM_UPDATE_1, CACHE_MEM_UPDATE_2, CACHE_INVALIDATE, WAIT_FETCH
 } state_t;
 state_t state, next_state;
 word_t [1:0] next_snoop_addr0, next_snoop_addr1;
-logic core, lru, next_core, next_lru, data_read, data_write, inst_read, core0_req, core1_req, next_ramREN, next_ramWEN;
+logic core, lru, next_core, next_lru, data_read, data_write, inst_read, core0_req, core1_req, next_ramREN, next_ramWEN, invalidate_check;
 word_t next_ramaddr, next_ramstore;
 
 assign data_read = cc.dREN[0] | cc.dREN[1];
@@ -236,10 +236,10 @@ always_comb begin
                 end
                 2'b10 : next_state = CACHE_UPDATE_1;
                 2'b11 : begin 
-                    next_state = CACHE_MEM_UPDATE1;
+                    next_state = CACHE_MEM_UPDATE_1;
                     next_ramWEN = 1'b1;
                     next_ramaddr = {cc.daddr[core][31:2], 2'b00};
-                    next_ramstore = dstore[!core];
+                    next_ramstore = cc.dstore[!core];
                 end
               
               
