@@ -251,7 +251,7 @@ always_comb begin
             if(cc.ramstate == ACCESS) begin
                 next_ramREN = 1'b0;
                 cc.dload[core] = cc.ramload;
-                next_state = CACHE_INVALIDATE;
+                next_state = IDLE;
                 next_ramaddr = 0;
                 cc.dwait[core] = 1'b0;
             end
@@ -292,7 +292,7 @@ always_comb begin
         CACHE_UPDATE_2: begin
             cc.dwait = 2'b0;
             cc.dload[core] = cc.dstore[!core];
-            next_state = IDLE;
+            next_state = CACHE_INVALIDATE;
         end
         default:;
 
