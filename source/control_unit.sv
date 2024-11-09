@@ -12,10 +12,12 @@ funct3_b_t funct3_b;
 funct3_i_t funct3_i;
 funct7_r_t funct7_r;
 funct7_srla_r_t funct7_srla_r;
+funct5_atomic_t funct5_atomic;
 
 assign funct3_r = funct3_r_t'(cif.instruction[14:12]);
 assign funct7_r = funct7_r_t'(cif.instruction[31:25]);
 assign funct3_i = funct3_i_t'(cif.instruction[14:12]);
+assign funct5_atomic = funct5_atomic_t'(cif.instruction[31:27]);
 
 assign funct3_b = funct3_b_t'(cif.instruction[14:12]);
 
@@ -42,6 +44,8 @@ always_comb begin
     cif.branch_type = 0;
     cif.lui = 1'b0;
     cif.zero = 1'b0;
+    cif.datomic = 1'b0;
+    cif.lrsc = 1'b0;
     casez(opcode)
         RTYPE : begin
             casez(funct3_r) 
@@ -144,6 +148,21 @@ always_comb begin
         end
         HALT : begin // might remove later since it isnt needed here x.x
             cif.halt = 1'b1;
+        end
+        LR_SC : begin
+            cif.alu_src = 1'b1;
+            cif.datomic = 1'b1;
+            //cif.regwrite = 1'b1;
+            casez(funct5_atomic)
+                LR : begin
+                    cif.memread = 1'b1;
+                    cif.memreg = 1'b1;
+                end
+                SC : begin
+                    cif.memwrite = 1'b1;
+                    cif.lrsc = 1'b1;
+                end
+            endcase
         end
     endcase
 end
