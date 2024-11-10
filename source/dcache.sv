@@ -157,7 +157,6 @@ always_comb begin : OUTPUT_LOGIC
     next_daddr = '0;
     next_dstore = '0;
     next_cctrans = 0;
-    next_ccwrite = 0;
 
     // To Datapath
     dpif.dhit = 0;
@@ -170,7 +169,7 @@ always_comb begin : OUTPUT_LOGIC
     next_hit_counter = hit_counter;
     next_flush_timer = flush_timer;
 
-    next_ccwrite = !ccif.ccwait ? dpif.dmemWEN : 0;
+    next_ccwrite = !ccif.ccwait && next_state != terminate ? dpif.dmemWEN : 0;
 
     if(!ccif.ccwait) begin
         case (state)

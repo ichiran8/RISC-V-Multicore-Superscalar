@@ -122,30 +122,30 @@ always_comb begin
                     if(!lru) begin
                         next_core = 1'b0;
                         
-                        //cc.ccinv[1] = 1'b1;//cc.ccwrite[0];
-                        //cc.ccwait[1] = 1'b1;
+                        cc.ccinv[1] = 1'b1;//cc.ccwrite[0];
+                        cc.ccwait[1] = 1'b1;
                         next_snoop_addr[1] = {cc.daddr[0][31:2], 2'b00};
                     end else begin
                         next_core = 1'b1;
-                        //cc.ccinv[0] = 1'b1; //cc.ccwrite[1];
-                        //cc.ccwait[0] = 1'b1;
+                        cc.ccinv[0] = 1'b1; //cc.ccwrite[1];
+                        cc.ccwait[0] = 1'b1;
                         next_snoop_addr[0] = {cc.daddr[1][31:2], 2'b00};
                     end
                 end else if (cc.ccwrite[0]) begin
                     next_core = 1'b0;
-                    //cc.ccinv[1] = 1'b1; 
+                    cc.ccinv[1] = 1'b1; 
                     next_lru = 1'b1;
-                    //cc.ccwait[1] = 1'b1;
+                    cc.ccwait[1] = 1'b1;
                     next_snoop_addr[1] = {cc.daddr[0][31:2], 2'b00};
                 end else if (cc.ccwrite[1]) begin
                     next_core = 1'b1;
-                    //cc.ccinv[0] = 1'b1; 
+                    cc.ccinv[0] = 1'b1; 
                     next_lru = 1'b0; 
-                    //cc.ccwait[0] = 1'b1;
+                    cc.ccwait[0] = 1'b1;
                     next_snoop_addr[0] = {cc.daddr[1][31:2], 2'b00};
                 end
             end 
-            else if (inst_read) begin // instruction read
+            else if (inst_read && !cc.cctrans) begin // instruction read
                 next_state = IFETCH;
                 next_ramREN = 1'b1;
                 if(cc.iREN[0] && cc.iREN[1]) begin // basic case
