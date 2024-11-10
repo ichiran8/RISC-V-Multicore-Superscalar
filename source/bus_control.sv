@@ -114,26 +114,32 @@ always_comb begin
                 end
             end 
             else if (invalidate_check) begin
+                next_state = CACHE_INVALIDATE;
                 if(cc.ccwrite[0] && cc.ccwrite[1]) begin
                     next_lru = !lru;
                     if(!lru) begin
-                        cc.ccinv[1] = 1'b1;//cc.ccwrite[0];
-                        cc.ccwait[1] = 1'b1;
+                        next_core = 1'b0;
+                        
+                        //cc.ccinv[1] = 1'b1;//cc.ccwrite[0];
+                        //cc.ccwait[1] = 1'b1;
                         next_snoop_addr[1] = {cc.daddr[0][31:2], 2'b00};
                     end else begin
-                        cc.ccinv[0] = 1'b1; //cc.ccwrite[1];
-                        cc.ccwait[0] = 1'b1;
+                        next_core = 1'b1;
+                        //cc.ccinv[0] = 1'b1; //cc.ccwrite[1];
+                        //cc.ccwait[0] = 1'b1;
                         next_snoop_addr[0] = {cc.daddr[1][31:2], 2'b00};
                     end
                 end else if (cc.ccwrite[0]) begin
-                    cc.ccinv[1] = 1'b1; 
+                    next_core = 1'b0;
+                    //cc.ccinv[1] = 1'b1; 
                     next_lru = 1'b1;
-                    cc.ccwait[1] = 1'b1;
+                    //cc.ccwait[1] = 1'b1;
                     next_snoop_addr[1] = {cc.daddr[0][31:2], 2'b00};
                 end else if (cc.ccwrite[1]) begin
-                    cc.ccinv[0] = 1'b1; 
+                    next_core = 1'b1;
+                    //cc.ccinv[0] = 1'b1; 
                     next_lru = 1'b0; 
-                    cc.ccwait[0] = 1'b1;
+                    //cc.ccwait[0] = 1'b1;
                     next_snoop_addr[0] = {cc.daddr[1][31:2], 2'b00};
                 end
             end 
