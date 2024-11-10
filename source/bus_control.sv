@@ -69,24 +69,26 @@ always_comb begin
                 next_state = D_UPDATE_1;
                 next_ramWEN = 1'b1;
                 if(cc.dWEN[0] && cc.dWEN[1]) begin // basic case
-                    next_lru = !lru;
+                    //next_lru = !lru;
                     if(!lru) begin // take dREN[1]
                         next_core = 0;
                         next_ramaddr = {cc.daddr[0][31:2], 2'b00};
                         next_ramstore = cc.dstore[0];
+                        next_lru = cc.cctrans[0] ? lru : !lru;
                     end else begin // take dREN [0]
                         next_core = 1;
                         next_ramaddr = {cc.daddr[1][31:2], 2'b00};
+                        next_lru = cc.cctrans[1] ? lru : !lru;
                         next_ramstore = cc.dstore[1];
                     end
                 end else if(cc.dWEN[0]) begin
                     next_core = 0;
-                    next_lru = 1'b1;
+                    next_lru = cc.cctrans[0] ? 1'b0 : 1'b1;
                     next_ramaddr = {cc.daddr[0][31:2], 2'b00};
                     next_ramstore = cc.dstore[0];
                 end else if (cc.dWEN[1]) begin
                     next_core = 1;
-                    next_lru = 1'b0;
+                    next_lru = cc.cctrans[1] ? 1'b1 : 1'b0;
                     next_ramaddr = {cc.daddr[1][31:2], 2'b00};
                     next_ramstore = cc.dstore[1];
                 end
