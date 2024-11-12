@@ -70,6 +70,13 @@ assign snoop_select = (frame[snoop.idx][1].tag == snoop.tag & frame[snoop.idx][1
 // bit1: valid
 // bit0: dirty
 
+// Reservation set
+logic[31:0] res_set;
+logic valid_res_set;
+
+logic[31:0] next_res_set;
+logic next_valid_res_set;
+
 always_comb begin : NEXT_STATE_LOGIC
     next_state = state;
 
@@ -133,6 +140,8 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         ccif.dstore <= '0;
         ccif.ccwrite <= 0;
         ccif.cctrans <= 0;
+        res_set <= '0;
+        valid_res_set <= '0;
     end
     else begin
         frame <= next_frame;
@@ -147,8 +156,13 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         ccif.dstore <= next_dstore;
         ccif.ccwrite <= next_ccwrite;
         ccif.cctrans <= next_cctrans;
+        res_set <= next_res_set;
+        valid_res_set <= next_valid_res_set;
     end
 end
+
+logic[31:0] block;
+assign block = {req.tag, req.idx, 1'b0, req.bytoff};
 
 always_comb begin : OUTPUT_LOGIC
     // To Controller
@@ -171,6 +185,9 @@ always_comb begin : OUTPUT_LOGIC
 
     next_ccwrite = !ccif.ccwait && next_state != terminate ? dpif.dmemWEN : 0;
 
+    next_res_set = res_set;
+    next_valid_res_set = valid_res_set;
+
     if(!ccif.ccwait) begin
         case (state)
             request: begin
@@ -183,6 +200,12 @@ always_comb begin : OUTPUT_LOGIC
 
                         if(dpif.dmemREN) begin
                             dpif.dmemload = frame[req.idx][frame_select[1]].data[req.blkoff];
+
+                            // LR
+                            if(dpif.datomic) begin 
+                                next_res_set = block;
+                                next_valid_res_set = 1; 
+                            end
                         end
                         else if(dpif.dmemWEN) begin
                             next_frame[req.idx][frame_select[1]].data[req.blkoff] = dpif.dmemstore; // idk if next_frame will affect speed
@@ -190,6 +213,19 @@ always_comb begin : OUTPUT_LOGIC
                             next_frame[req.idx][frame_select[1]].valid = 1;
 
                             // next_ccwrite = 1; // check, might be enough without at access1
+                            
+                            if(dpif.datomic) begin
+                                if(valid_res_set && res_set == block) begin
+                                    dpif.dmemload = 0; // R[rd] = 0
+                                    // next_frame = dpif.dmemstore from above (M[rs1] = R[rs2])
+                                    next_valid_res_set = 0; 
+                                end
+                                else begin
+                                    dpif.dmemload = 1; // R[rd] = 1
+                                    // next_ccwrite = 0;
+                                    next_valid_res_set = 0; 
+                                end
+                            end
                         end
                     end
                 end
@@ -328,6 +364,9 @@ always_comb begin : OUTPUT_LOGIC
         if(ccif.ccinv) begin
             if(snoop_select != 2'd0)
                 next_frame[snoop.idx][snoop_select[1]].valid = 0;
+
+            if(res_set == {snoop.tag, snoop.idx, 1'b0, snoop.bytoff})
+                next_valid_res_set = 0;
         end
     end
 end

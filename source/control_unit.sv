@@ -152,15 +152,18 @@ always_comb begin
         LR_SC : begin
             cif.alu_src = 1'b1;
             cif.datomic = 1'b1;
-            //cif.regwrite = 1'b1;
+            cif.memreg = 1'b1;
+            cif.regwrite = 1'b1;
+            cif.lrsc = 1'b1;
             casez(funct5_atomic)
                 LR : begin
                     cif.memread = 1'b1;
-                    cif.memreg = 1'b1;
+                    //cif.memreg = 1'b1;
                 end
                 SC : begin
                     cif.memwrite = 1'b1;
-                    cif.lrsc = 1'b1;
+                
+                    //cif.lrsc = 1'b1;
                 end
             endcase
         end

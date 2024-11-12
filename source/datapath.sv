@@ -42,7 +42,7 @@ logic [1:0] forwardA, forwardB;
     word_t rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen; //, instruction;
     logic [19:0] u_addr;
     aluop_t alu_op;
-    logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2, zero; 
+    logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2, zero, datomic, lrsc; 
     regbits_t wsel, rsel1, rsel2;
     logic [1:0] branch_type;
   } id_ex_t;
@@ -52,7 +52,7 @@ logic [1:0] forwardA, forwardB;
   typedef struct packed {
     word_t write_selected, dmemstore, dmemload, imm_gen, curr_pc, portA, portB;//, newpc, instruction, rdat1, rdat2;
     //logic [19:0] u_addr;
-    logic regwrite, memwrite, memread, memreg, halt, zero; 
+    logic regwrite, memwrite, memread, memreg, halt, zero, datomic; 
     logic [1:0] branch_type;
     regbits_t wsel;//, rsel1, rsel2;
   } ex_mem_t;
@@ -75,7 +75,7 @@ alu alu(aluif);
 control_unit cu1(cif);
 forwarding_unit forward(.id_ex_rsel1(id_ex.rsel1), .id_ex_rsel2(id_ex.rsel2), .ex_mem_wsel(ex_mem.wsel), .mem_wb_wsel(mem_wb.wsel), .ex_mem_regwrite(ex_mem.regwrite), .mem_wb_regwrite(mem_wb.regwrite), .forwardA(forwardA), .forwardB(forwardB));
 //hazard_unit hazarding(.id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write), .flush_id_ex(hazard_flush_id_ex));
-hazard_unit hazarding(.branch(branch), .jump(cif.jump), .jalr(id_ex.jalr),  .halt(id_ex.halt), .if_flush(if_flush), .id_flush(id_flush), .ex_flush(ex_flush), .id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write)); // check halt
+hazard_unit hazarding(.branch(branch), .jump(cif.jump), .jalr(id_ex.jalr),  .halt(id_ex.halt), .if_flush(if_flush), .id_flush(id_flush), .ex_flush(ex_flush), .id_ex_memread(id_ex.memread || id_ex.lrsc), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write)); // check halt
     
 assign dpif.imemREN = 1'b1;//(stall) ? 1'b0 : 1'b1; //!(dpif.dmemREN | dpif.dmemWEN);
 assign control_pipe = (ex_mem.memread | ex_mem.memwrite) ? (dpif.dhit & dpif.ihit) : dpif.ihit;
@@ -146,6 +146,8 @@ assign cif.instruction = if_id.instruction;
         //id_ex.jump_target <= if_id.curr_pc + cif.imm_gen;
         id_ex.switch1 <= cif.jalr | cif.jump;
         //id_ex.u_addr <= if_id.u_addr;
+        id_ex.datomic <= cif.datomic;
+        id_ex.lrsc <= cif.lrsc;
       end
   end
 always_comb begin
@@ -243,6 +245,7 @@ end
       ex_mem.zero <= id_ex.zero;
       ex_mem.portA <= aluif.rda;
       ex_mem.portB <= aluif.rdb;
+      ex_mem.datomic <= id_ex.datomic;
      //ex_mem.newpc <= (id_ex.jump | id_ex.jalr) ? next_pc : id_ex.pc_add;
       //ex_mem.rsel1 <= id_ex.rsel1;
       //ex_mem.rsel2 <= id_ex.rsel2;
@@ -264,6 +267,7 @@ assign dpif.dmemstore = ex_mem.dmemstore;
 assign dpif.dmemaddr  = ex_mem.write_selected;
 assign dpif.dmemREN   = ex_mem.memread;
 assign dpif.dmemWEN   = ex_mem.memwrite;
+assign dpif.datomic   = ex_mem.datomic;
 //assign write_back     = (ex_mem.memreg) ? load : ex_mem.write_selected;
 
 
