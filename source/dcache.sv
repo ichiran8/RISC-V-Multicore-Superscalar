@@ -218,7 +218,7 @@ always_comb begin : OUTPUT_LOGIC
                             // next_ccwrite = 1; // check, might be enough without at access1
                             
                             if(dpif.datomic) begin
-                                next_valid_res_set = 0;
+                                next_valid_res_set = (ccif.dwait) ? 1'b1 : 1'b0;
                                 if(valid_res_set && res_set == block) begin
                                     dpif.dmemload = 0; // R[rd] = 0
                                     // next_frame = dpif.dmemstore from above (M[rs1] = R[rs2])
@@ -244,6 +244,12 @@ always_comb begin : OUTPUT_LOGIC
                 end
                 if(next_state == flush1)
                     next_cctrans = 1;
+                if(next_state == access1) begin
+                    next_dREN = 1;
+                    next_daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
+
+                    // here, make request to bus
+                end
             end
             update1: begin
                 if(next_state == update1) begin
