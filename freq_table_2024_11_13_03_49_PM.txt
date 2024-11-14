@@ -1,0 +1,9 @@
+Frequency Sweep Report File 2024_11_13_03_49_PM
+Frequency table for LAT = 0 85C Model
++------------+-----------------+---------------------+------+
+; Fmax       ; Restricted Fmax ; Clock Name          ; Note ;
++------------+-----------------+---------------------+------+
+; 63.38 MHz  ; 63.38 MHz       ; CPUCLK              ;      ;
+; 84.57 MHz  ; 84.57 MHz       ; altera_reserved_tck ;      ;
+; 108.92 MHz ; 108.92 MHz      ; CLK                 ;      ;
++------------+-----------------+---------------------+------+

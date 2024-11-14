@@ -38,7 +38,7 @@ logic[4:0] next_flush_timer;
 
 typedef enum bit [10:0] {request, access1, access2, update1, update2, flush1, flush2, write_hits, terminate, bus_data1, bus_data2} stateType;
 
-stateType state;
+stateType state, prev_state;
 stateType next_state;
 
 logic next_dREN;
@@ -140,6 +140,7 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         ccif.dstore <= '0;
         ccif.ccwrite <= 0;
         ccif.cctrans <= 0;
+        prev_state <= request;
         res_set <= '0;
         valid_res_set <= '0;
     end
@@ -158,17 +159,19 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         ccif.cctrans <= next_cctrans;
         res_set <= next_res_set;
         valid_res_set <= next_valid_res_set;
+        prev_state <= state;
     end
 end
 
-logic[31:0] block;
+word_t block, block2;
 assign block = {req.tag, req.idx, 1'b0, req.bytoff};
+assign block2 = {snoop.tag, snoop.idx, 1'b0, snoop.bytoff};
 
 always_comb begin : OUTPUT_LOGIC
     // To Controller
     next_dREN = 0;
     next_dWEN = 0;
-    next_daddr = '0;
+    next_daddr = 0;
     next_dstore = '0;
     next_cctrans = 0;
 
@@ -188,8 +191,8 @@ always_comb begin : OUTPUT_LOGIC
     next_res_set = res_set;
     next_valid_res_set = valid_res_set;
 
-    if(!ccif.ccwait) begin
-        case (state)
+    if(!ccif.ccwait) begin 
+        casez(state)
             request: begin
                 if(dpif.dmemREN | dpif.dmemWEN) begin
                     if(!prev_dhit & frame_select != 2'd0) begin // if not 0, then check bit 1
@@ -197,13 +200,12 @@ always_comb begin : OUTPUT_LOGIC
                         next_hit_counter = hit_counter + 1;
 
                         next_lru[req.idx] = frame_select[0]; // frame1 not used if 0, frame2 not used if 1
-
                         if(dpif.dmemREN) begin
                             dpif.dmemload = frame[req.idx][frame_select[1]].data[req.blkoff];
 
                             // LR
                             if(dpif.datomic) begin 
-                                next_res_set = block;
+                                next_res_set = block;//{req.tag, req.idx, 1'b0, req.bytoff};;
                                 next_valid_res_set = 1; 
                             end
                         end
@@ -211,19 +213,21 @@ always_comb begin : OUTPUT_LOGIC
                             next_frame[req.idx][frame_select[1]].data[req.blkoff] = dpif.dmemstore; // idk if next_frame will affect speed
                             next_frame[req.idx][frame_select[1]].dirty = 1;
                             next_frame[req.idx][frame_select[1]].valid = 1;
-
+                            next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
+                            dpif.dhit = !(ccif.dwait); // we need to make sure it gets invalidated before returning a hit.
                             // next_ccwrite = 1; // check, might be enough without at access1
                             
                             if(dpif.datomic) begin
+                                next_valid_res_set = 0;
                                 if(valid_res_set && res_set == block) begin
                                     dpif.dmemload = 0; // R[rd] = 0
                                     // next_frame = dpif.dmemstore from above (M[rs1] = R[rs2])
-                                    next_valid_res_set = 0; 
+                                    //next_valid_res_set = 0; 
                                 end
                                 else begin
                                     dpif.dmemload = 1; // R[rd] = 1
                                     // next_ccwrite = 0;
-                                    next_valid_res_set = 0; 
+                                    //next_valid_res_set = 0; 
                                 end
                             end
                         end
@@ -237,7 +241,6 @@ always_comb begin : OUTPUT_LOGIC
                 if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
                     next_daddr[1:0] = {frame[snoop.idx][snoop_select[1]].valid, frame[snoop.idx][snoop_select[1]].dirty}; 
                     next_dstore = frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
-
                 end
                 if(next_state == flush1)
                     next_cctrans = 1;
@@ -356,17 +359,19 @@ always_comb begin : OUTPUT_LOGIC
         endcase
     end
     else begin
-        if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
-            next_daddr[1:0] = {frame[snoop.idx][snoop_select[1]].valid, frame[snoop.idx][snoop_select[1]].dirty}; 
-            next_dstore = frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
+        // if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
+        //     next_daddr[1:0] = {frame[snoop.idx][snoop_select[1]].valid, frame[snoop.idx][snoop_select[1]].dirty}; 
+        //     next_dstore = frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
 
-        end
+        // end
+        next_dREN = 1'b0; //ccif.dREN;
+        next_dWEN = 1'b0; //ccif.dWEN;
         if(ccif.ccinv) begin
             if(snoop_select != 2'd0)
-                next_frame[snoop.idx][snoop_select[1]].valid = 0;
+                next_frame[snoop.idx][snoop_select[1]].valid = 1'b0; //(snoop_select == 2'd0);
 
-            if(res_set == {snoop.tag, snoop.idx, 1'b0, snoop.bytoff})
-                next_valid_res_set = 0;
+            if(res_set == block2)
+                next_valid_res_set = 1'b0;
         end
     end
 end

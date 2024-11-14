@@ -14,7 +14,7 @@ do
    grep -A 7 "Slow 1200mV 85C Model Fmax Summary" ._system/system.sta.rpt | tail -n7 >> $fname
 
    make clean
-   asm asmFiles/mergesort.asm
+   asm asmFiles/dual.mergesort.asm
    make system
    make system.sim > synRunResults.txt
 
