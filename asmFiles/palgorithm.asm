@@ -254,6 +254,7 @@ mainc2:
 
     add s2, s2, s1 # add value to current sum
 
+    # can use their subroutines
     blt s1, s3, skip_max  # if value > curr max (there's no branch less/equal to)
     addi s3, s1, 0 # curr max = value
     skip_max:
@@ -272,8 +273,6 @@ mainc2:
   addi a3, zero, 256 # move 256 to a3
   jal divide # divide sum by 256
   
-  temp:
-
   pop   ra                    # get return address
   ret
 
