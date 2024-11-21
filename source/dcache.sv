@@ -28,15 +28,15 @@ assign frame_select = (frame[req.idx][1].tag == req.tag & frame[req.idx][1].vali
 logic [7:0] lru; // 0 = frame1 least recently used, 1 = frame2
 logic [7:0] next_lru;
 
-logic [31:0] hit_counter;
-logic [31:0] next_hit_counter;
+// logic [31:0] hit_counter;
+// logic [31:0] next_hit_counter;
 
 logic prev_dhit;
 
 logic[4:0] flush_timer;
 logic[4:0] next_flush_timer;
 
-typedef enum bit [10:0] {request, access1, access2, update1, update2, flush1, flush2, write_hits, terminate, bus_data1, bus_data2} stateType;
+typedef enum bit [10:0] {request, access1, access2, update1, update2, flush1, flush2, wait_flush, terminate, bus_data1, bus_data2} stateType;
 
 stateType state, prev_state;
 stateType next_state;
@@ -83,8 +83,11 @@ always_comb begin : NEXT_STATE_LOGIC
     if(!ccif.ccwait) begin
         case (state)
             request: begin
-                if(dpif.halt)
-                    next_state = flush1;
+                if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
+                    next_state = bus_data1;
+                end
+                else if(dpif.halt)
+                    next_state = wait_flush;
                 else if(snoop_req == 2'd0 && (dpif.dmemREN | dpif.dmemWEN) && frame_select == 2'd0) begin
                     if(!frame[req.idx][lru[req.idx]].dirty) begin // clean
                         next_state = access1;
@@ -92,9 +95,6 @@ always_comb begin : NEXT_STATE_LOGIC
                     if(frame[req.idx][lru[req.idx]].dirty) begin // dirty
                         next_state = update1;
                     end
-                end
-                else if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
-                    next_state = bus_data1;
                 end
             end
             update1: next_state = !ccif.dwait ? update2 : state;
@@ -117,10 +117,11 @@ always_comb begin : NEXT_STATE_LOGIC
             //bus_data1: next_state = !ccif.ccwait ? bus_data2 : state; // for tb use
             bus_data2: next_state = !ccif.dwait ? request : state; // for actual use
             //bus_data2: next_state = !ccif.ccwait ? request : state; // for tb use
-            flush1: next_state = flush_timer == 5'd16 ? write_hits : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty | !frame[flush_timer[2:0]][flush_timer[3]].valid) ? flush2 : state; // flush first word
+            wait_flush: next_state = snoop_select != 2'd0 & snoop_req == 2'b01 ? bus_data1 : flush1;
+            flush1: next_state = flush_timer == 5'd16 ? terminate : (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty | !frame[flush_timer[2:0]][flush_timer[3]].valid) ? flush2 : state; // flush first word
             flush2: next_state = (!ccif.dwait | !frame[flush_timer[2:0]][flush_timer[3]].dirty | !frame[flush_timer[2:0]][flush_timer[3]].valid) ? flush1 : state; // flush second word
             // write_hits: next_state = !ccif.dwait ? terminate : state;
-            write_hits: next_state = terminate;
+            // write_hits: next_state = terminate;
             // terminate: stay in terminate, i think
         endcase
     end
@@ -131,7 +132,7 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         frame <= '0; // i think we reset to 0, but check
         lru <= '0;
         state <= request;
-        hit_counter <= '0;
+        // hit_counter <= '0;
         prev_dhit <= 0;
         flush_timer <= '0;
         ccif.dREN <= 0;
@@ -148,7 +149,7 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         frame <= next_frame;
         lru <= next_lru;
         state <= next_state;
-        hit_counter <= next_hit_counter;
+        // hit_counter <= next_hit_counter;
         prev_dhit <= dpif.dhit; // prev_dhit needed for solving double counting
         flush_timer <= next_flush_timer;
         ccif.dREN <= next_dREN;
@@ -183,10 +184,10 @@ always_comb begin : OUTPUT_LOGIC
     // Internal
     next_lru = lru;
     next_frame = frame;
-    next_hit_counter = hit_counter;
+    // next_hit_counter = hit_counter;
     next_flush_timer = flush_timer;
 
-    next_ccwrite = !ccif.ccwait && next_state != terminate ? dpif.dmemWEN : 0;
+    next_ccwrite = !ccif.ccwait && next_state != terminate && next_state != wait_flush ? dpif.dmemWEN : 0;
 
     next_res_set = res_set;
     next_valid_res_set = valid_res_set;
@@ -197,7 +198,7 @@ always_comb begin : OUTPUT_LOGIC
                 if(dpif.dmemREN | dpif.dmemWEN) begin
                     if(!prev_dhit & frame_select != 2'd0) begin // if not 0, then check bit 1
                         dpif.dhit = 1;
-                        next_hit_counter = hit_counter + 1;
+                        // next_hit_counter = hit_counter + 1;
 
                         next_lru[req.idx] = frame_select[0]; // frame1 not used if 0, frame2 not used if 1
                         if(dpif.dmemREN) begin
@@ -242,8 +243,8 @@ always_comb begin : OUTPUT_LOGIC
                     next_daddr[1:0] = {frame[snoop.idx][snoop_select[1]].valid, frame[snoop.idx][snoop_select[1]].dirty}; 
                     next_dstore = frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
                 end
-                if(next_state == flush1)
-                    next_cctrans = 1;
+                // if(next_state == flush1)
+                //     next_cctrans = 1;
                 if(next_state == access1) begin
                     next_dREN = 1;
                     next_daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
@@ -283,7 +284,7 @@ always_comb begin : OUTPUT_LOGIC
                     next_frame[req.idx][lru[req.idx]].dirty = 1;
                     next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
 
-                    next_hit_counter = hit_counter - 1;
+                    // next_hit_counter = hit_counter - 1;
 
                     // next_ccwrite = 1; // check
                 end
@@ -309,7 +310,7 @@ always_comb begin : OUTPUT_LOGIC
                     next_frame[req.idx][lru[req.idx]].dirty = 0; // if we got here, we should only be doing a read
                     next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
 
-                    next_hit_counter = hit_counter - 1;
+                    // next_hit_counter = hit_counter - 1;
                 end
 
                 if(next_state == access2) begin
@@ -318,6 +319,14 @@ always_comb begin : OUTPUT_LOGIC
 
                     // here, make request to bus
                 end
+            end
+            wait_flush: begin
+                if(snoop_req == 2'b01 && snoop_select != 2'd0) begin
+                    next_daddr[1:0] = {frame[snoop.idx][snoop_select[1]].valid, frame[snoop.idx][snoop_select[1]].dirty}; 
+                    next_dstore = frame[snoop.idx][snoop_select[1]].data[snoop.blkoff];
+                end
+                if(next_state == flush1)
+                    next_cctrans = 1;
             end
             flush1: begin
                 next_cctrans = 1;
@@ -341,14 +350,14 @@ always_comb begin : OUTPUT_LOGIC
                 if(next_state == flush1)
                     next_flush_timer = flush_timer + 1;
             end
-            write_hits: begin
-                if(next_state == write_hits) begin
-                    // commented out for multicore
-                    // next_dstore = hit_counter;
-                    // next_daddr = 32'h3100;
-                    // next_dWEN = 1;
-                end
-            end
+            // write_hits: begin
+            //     if(next_state == write_hits) begin
+            //         // commented out for multicore
+            //         // next_dstore = hit_counter;
+            //         // next_daddr = 32'h3100;
+            //         // next_dWEN = 1;
+            //     end
+            // end
             terminate: begin
                 dpif.flushed = 1;
             end

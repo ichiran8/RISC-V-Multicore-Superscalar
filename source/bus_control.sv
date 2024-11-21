@@ -70,22 +70,26 @@ always_comb begin
                         next_ramaddr = {cc.daddr[0][31:2], 2'b00};
                         next_ramstore = cc.dstore[0];
                         next_lru = cc.cctrans[0] ? lru : !lru;
+                        cc.ccwait[1] = 1'b1;
                     end else begin // take dREN [0]
                         next_core = 1;
                         next_ramaddr = {cc.daddr[1][31:2], 2'b00};
                         next_lru = cc.cctrans[1] ? lru : !lru;
                         next_ramstore = cc.dstore[1];
+                        cc.ccwait[0] = 1'b1;
                     end
                 end else if(cc.dWEN[0]) begin
                     next_core = 0;
                     next_lru = cc.cctrans[0] ? 1'b0 : 1'b1;
                     next_ramaddr = {cc.daddr[0][31:2], 2'b00};
                     next_ramstore = cc.dstore[0];
+                    cc.ccwait[1] = 1'b1;
                 end else if (cc.dWEN[1]) begin
                     next_core = 1;
                     next_lru = cc.cctrans[1] ? 1'b1 : 1'b0;
                     next_ramaddr = {cc.daddr[1][31:2], 2'b00};
                     next_ramstore = cc.dstore[1];
+                    cc.ccwait[0] = 1'b1;
                 end
             end 
             else if(data_read) begin // busRD or busRDX
@@ -166,6 +170,7 @@ always_comb begin
         end
         D_UPDATE_1: begin
             next_ramWEN = 1'b1;
+            cc.ccwait[!core] = 1'b1;
             if(cc.ramstate == ACCESS) begin
                 cc.dwait[core] = 1'b0;
                 next_ramWEN = 1'b0;
@@ -175,6 +180,7 @@ always_comb begin
             end
         end
         WAIT_MEM : begin
+            cc.ccwait[!core] = 1'b1;
             if(cc.dWEN[core]) begin
                 next_state = D_UPDATE_2;
                 next_ramWEN = 1'b1;  
@@ -183,6 +189,7 @@ always_comb begin
             end
         end
         D_UPDATE_2: begin
+            cc.ccwait[!core] = 1'b1;
             next_ramWEN = 1'b1;
             if(cc.ramstate == ACCESS) begin
                 cc.dwait[core] = 1'b0;

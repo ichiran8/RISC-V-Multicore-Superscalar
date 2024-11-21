@@ -164,13 +164,14 @@ pop_parallel:
 mainc1:
   push    ra                    # save return address to main
 
-  addi s0, zero, seed # move seed to s0
+  addi s0, zero, seed # move seed address to s0
+  lw s0, 0(s0) # move seed to s0
 
-  addi t3, zero, 0 # start from index 0
-  addi t4, zero, 256
+  addi s11, zero, 0 # start from index 0
+  addi s10, zero, 256
 
   for_crc:
-    bge t3, t4, exit_for_crc # i >= 256, generated all 256 numbers
+    bge s11, s10, exit_for_crc # i >= 256, generated all 256 numbers
 
     add a2, zero, s0  # move old seed to a2
     jal crc32 # get random[i] = crc(random[i - 1])
@@ -194,7 +195,7 @@ mainc1:
     ori     a0, zero, lock_var    # move lock to argument register
     jal     unlock                # release the lock
 
-    addi t3, t3, 1 # increment index
+    addi s11, s11, 1 # increment index
 
     jal for_crc # go to next iteration
 
@@ -220,15 +221,22 @@ mainc1:
 mainc2:
   push    ra                    # save return address
 
-  addi s2, zero, 0 # count for average
-  addi s3, zero, 0 # current max
-  addi s4, zero, 2147483647 # current min (2^31 - 1)
+  addi s2, zero, 0 # count for average ; x18
+  addi s3, zero, 0 # current max ; x19
+  addi s4, zero, 2147483647 # current min (2^31 - 1) ; x20
 
-  addi t3, zero, 0 # start from index 0
-  addi t4, zero, 256
+  addi s10, zero, 0 # start from index 0
+  addi s11, zero, 256
 
   for_consumer:
-    bge t3, t4, exit_for_consumer # i >= 256, used all 256 numbers
+    bge s10, s11, exit_for_consumer # i >= 256, used all 256 numbers
+
+    li s9, stack_location # load stack
+    lw s8, 0(s9) # load address of stack pointer
+    lw s7, 0(s8) # load value
+    beq s7, zero, for_consumer
+    # beq zero, zero, exit_for_consumer
+
 
     ori     a0, zero, lock_var    # move lock to argument register
     jal     lock                  # try to acquire the lock
@@ -236,13 +244,9 @@ mainc2:
     # ----------------------- #
     # critical code segment:
 
-    li t1, stack_location # load stack
-    lw t0, 0(t1) # load address of stack pointer
-    beq t0, zero, skip_pop
 
     jal pop_parallel # get random[i] on stack
     addi s1, a0, 0 # move popped value to s1
-    skip_pop:
 
     # ----------------------- #
 
@@ -259,12 +263,11 @@ mainc2:
     addi s3, s1, 0 # curr max = value
     skip_max:
 
-    bge s1, s4, skip_min # if value < curr min
+    bgeu s1, s4, skip_min # if value < curr min
     addi s4, s1, 0 # curr min = value
     skip_min:
     
-    addi t3, t3, 1 # increment index
-    
+    addi s10, s10, 1 # increment index
     jal for_consumer # go to next iteration
 
   exit_for_consumer:
@@ -273,19 +276,25 @@ mainc2:
   addi a3, zero, 256 # move 256 to a3
   jal divide # divide sum by 256
   
+  sw s3, 0x1000(zero)
+  sw s4, 0x1004(zero)
+  sw a0, 0x1008(zero)
+
+  #sw a0, 0x8000($0)
   pop   ra                    # get return address
   ret
 
 #----------------------------------------------------------
 # Shared Data Segment
 #----------------------------------------------------------
+
 org 0x0300
 lock_var:
   cfw 0x0     # lock starts unlocked, should end unlocked
 res:
   cfw 0x0     # end result should be 3
 seed:
-  cfw 0x0     # for crc generation
+  cfw 0x8    # for crc generation
 
 org 0x04000
 stack_location:
