@@ -112,12 +112,12 @@ add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/forwardA1
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/forwardB1
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/forwardA2
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/forwardB2
-add wave -noupdate -expand -group CORE1 -expand /system_tb/DUT/CPU/DP1/if_id1
+add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/if_id1
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/if_id2
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/id_ex1
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/id_ex2
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/ex_mem1
-add wave -noupdate -expand -group CORE1 -expand /system_tb/DUT/CPU/DP1/ex_mem2
+add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/ex_mem2
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/mem_wb1
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/mem_wb2
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/stall
@@ -128,8 +128,8 @@ add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/load1
 add wave -noupdate -expand -group CORE1 /system_tb/DUT/CPU/DP1/load2
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/CLK
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/nRST
-add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/req
-add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/frame
+add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} -expand /system_tb/DUT/CPU/CM1/DCACHE/req
+add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} -expand -subitemconfig {{/system_tb/DUT/CPU/CM1/DCACHE/frame[1]} -expand {/system_tb/DUT/CPU/CM1/DCACHE/frame[1][0]} -expand {/system_tb/DUT/CPU/CM1/DCACHE/frame[0]} -expand {/system_tb/DUT/CPU/CM1/DCACHE/frame[0][0]} -expand {/system_tb/DUT/CPU/CM1/DCACHE/frame[0][0].data} -expand} /system_tb/DUT/CPU/CM1/DCACHE/frame
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/next_frame
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/frame_select
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/lru
@@ -147,7 +147,7 @@ add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/next_ccwrite
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/next_cctrans
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/snoop_req
-add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/snoop
+add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} -expand /system_tb/DUT/CPU/CM1/DCACHE/snoop
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/snoop_select
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/res_set
 add wave -noupdate -expand -group CORE1 -expand -group {DCACHE 1} /system_tb/DUT/CPU/CM1/DCACHE/valid_res_set
@@ -167,23 +167,23 @@ add wave -noupdate -expand -group CORE1 -group {ICACHE 1} /system_tb/DUT/CPU/CM1
 add wave -noupdate -expand -group CORE1 -group {ICACHE 1} /system_tb/DUT/CPU/CM1/ICACHE/next_iaddr
 add wave -noupdate -expand -group CORE1 -group {ICACHE 1} /system_tb/DUT/CPU/CM1/ICACHE/ihit1
 add wave -noupdate -expand -group CORE1 -group {ICACHE 1} /system_tb/DUT/CPU/CM1/ICACHE/ihit2
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/CLK
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/nRST
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/state
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/next_state
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/core
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/lru
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/next_core
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/next_lru
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/data_read
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/data_write
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/inst_read
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/next_ramREN
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/next_ramWEN
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/invalidate_check
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/next_ramaddr
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/next_ramstore
-add wave -noupdate -group {Bus Controller} /system_tb/DUT/CPU/CC/next_snoop_addr
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/CLK
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/nRST
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/state
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/next_state
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/core
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/lru
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/next_core
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/next_lru
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/data_read
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/data_write
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/inst_read
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/next_ramREN
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/next_ramWEN
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/invalidate_check
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/next_ramaddr
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/next_ramstore
+add wave -noupdate -expand -group {Bus Controller} /system_tb/DUT/CPU/CC/next_snoop_addr
 add wave -noupdate -group RAM /system_tb/DUT/RAM/BAD
 add wave -noupdate -group RAM /system_tb/DUT/RAM/LAT
 add wave -noupdate -group RAM /system_tb/DUT/RAM/CLK
@@ -213,7 +213,7 @@ add wave -noupdate /system_tb/DUT/CPU/CM0/DCACHE/dpif/dmemstore
 add wave -noupdate /system_tb/DUT/CPU/CM0/DCACHE/dpif/dmemaddr
 add wave -noupdate /system_tb/DUT/CPU/CM0/DCACHE/dpif/dmemaddr
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {23651830 ps} 0}
+WaveRestoreCursors {{Cursor 1} {5645853195 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 168
 configure wave -valuecolwidth 100
@@ -229,4 +229,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {23522086 ps} {25397910 ps}
+WaveRestoreZoom {5645039546 ps} {5646915370 ps}

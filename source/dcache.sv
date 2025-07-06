@@ -215,7 +215,7 @@ always_comb begin : OUTPUT_LOGIC
                             next_frame[req.idx][frame_select[1]].dirty = 1;
                             next_frame[req.idx][frame_select[1]].valid = 1;
                             next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
-                            dpif.dhit = !(ccif.dwait); // we need to make sure it gets invalidated before returning a hit.
+                            dpif.dhit = !(ccif.dwait) & ccif.ccwrite; // we need to make sure it gets invalidated before returning a hit.
                             // next_ccwrite = 1; // check, might be enough without at access1
                             
                             if(dpif.datomic) begin
