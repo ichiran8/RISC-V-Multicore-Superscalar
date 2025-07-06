@@ -65,16 +65,19 @@ Example : rsel1_1
   --> Don't think there is much to say here
 */
 
-word_t next_pc, pc, portA1, portB1, portA2, portB2; 
-logic control_pipe, stall_flag, misalignment; 
+word_t next_pc, pc, portA1, portB1, portA2, portB2, predicted_pc; 
+logic control_pipe, stall_flag, misalignment, branch_mispredicted1, branch_mispredicted2, same_pred1, same_pred2, branch_inst1, branch_inst2;
+logic [5:0] used_ghr1, used_ghr2; 
 logic start, stall_check;
 logic switch1, PCWrite, if_id_write1, if_id_write2; // we're going to have two flush signals for id_ex, so seperated names
-logic if_flush, id_flush1, id_flush2, ex_flush, branch1, branch2; 
+logic if_flush, id_flush1, id_flush2, ex_flush, branch1, branch2, branch_predicted1, branch_predicted2, dual_branch, id_ex1_branch, id_ex2_branch; 
 logic [2:0] forwardA1, forwardB1, forwardA2, forwardB2;
 
   // ************************ INSTRUCTION FETCH / DECODE PIPELINE STRUCT ************************
   typedef struct packed {
     word_t instruction, pc_add, curr_pc;
+    logic branch_predicted, same_pred;
+    logic [5:0] used_ghr;
   } if_id_t;
 
   if_id_t if_id1, if_id2;
@@ -86,7 +89,8 @@ logic [2:0] forwardA1, forwardB1, forwardA2, forwardB2;
     word_t instruction, rdat1, rdat2, pc_add, curr_pc, u_type, imm_gen;
     logic [19:0] u_addr;
     aluop_t alu_op;
-    logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2, zero, datomic, lrsc; 
+    logic alu_src, regwrite, memwrite, memread, memreg, jump, halt, jalr, switch1, switch2, zero, datomic, lrsc, branch_predicted, same_pred;
+    logic [5:0] used_ghr; 
     regbits_t wsel, rsel1, rsel2;
     logic [1:0] branch_type;
   } id_ex_t;
@@ -143,10 +147,15 @@ has a dependency, load use still exists
 2) Need to make sure branches, jumps, or jalr blocks load_use hazard from being detected. Further modifications are needed but it should be simple
 I can or the jumps (ex: cif1.jump || (cif2.jump && !stall_flag)))
 */
-hazard_unit hazarding(.branch(branch1 || branch2), .jump(cif1.jump || (cif2.jump && !stall_flag)), .halt(id_ex1.halt || (id_ex2.halt & !(branch1 || id_ex1.jalr))), .if_flush(if_flush), .id_flush1(id_flush1), .id_flush2(id_flush2), .id_ex_memread1(id_ex1.memread || id_ex1.lrsc), 
+hazard_unit hazarding(.branch(branch_mispredicted1 || branch_mispredicted2), .jump(cif1.jump || (cif2.jump && !stall_flag)), .halt(id_ex1.halt || (id_ex2.halt & !(branch1 || id_ex1.jalr))), .if_flush(if_flush), .id_flush1(id_flush1), .id_flush2(id_flush2), .id_ex_memread1(id_ex1.memread || id_ex1.lrsc), 
 .id_ex_rd1(id_ex1.wsel), .id_ex_rd2(id_ex2.wsel), .if_id_rs1_1(rfif.rsel1_1), .if_id_rs2_1(rfif.rsel2_1), .id_ex_memread2(id_ex2.memread || id_ex2.lrsc), .if_id_rs1_2(rfif.rsel1_2), .if_id_rs2_2(rfif.rsel2_2), .PCWrite(PCWrite), .if_id_write1(if_id_write1), .if_id_write2(if_id_write2), .jalr(id_ex1.jalr || id_ex2.jalr));
 // Technically we could include more checking for whether or not JALR or branch2 should have effect is branch 1 is in play but it doesn't REALLY matter
 //hazard_unit hazarding1(.branch(branch), .jump(cif1.jump), .jalr(id_ex.jalr),  .halt(id_ex.halt), .if_flush(if_flush), .id_flush(id_flush), .id_ex_memread(id_ex.memread), .id_ex_rd(id_ex.wsel), .if_id_rs1(rfif.rsel1), .if_id_rs2(rfif.rsel2), .PCWrite(PCWrite), .if_id_write(if_id_write)); // check halt
+tournament_predictor tp(.CLK(CLK), .nRST(nRST), .enable(control_pipe), .branch_mispredicted1(branch_mispredicted1), .branch_mispredicted2(branch_mispredicted2), 
+.prev_same_pred1(id_ex1.same_pred), .prev_same_pred2(id_ex2.same_pred), .index1(pc[7:2]), .index2(dpif.imemaddr2[7:2]), .next_index1(id_ex1.curr_pc[7:2]), 
+.next_index2(id_ex2.curr_pc[7:2]), .pc(pc), .target1(id_ex1.curr_pc + id_ex1.imm_gen), .target2(id_ex2.curr_pc + id_ex2.imm_gen), .prev_ghr1(id_ex1.used_ghr),
+.prev_ghr2(id_ex2.used_ghr), .branch1(branch1), .branch2(branch2), .id_ex1_branch(id_ex1_branch), .id_ex2_branch(id_ex2_branch), .if_id1_branch(branch_inst1), .if_id2_branch(branch_inst2),
+.predicted_pc(predicted_pc), .branch_predicted1(branch_predicted1), .branch_predicted2(branch_predicted2), .same_pred1(same_pred1), .same_pred2(same_pred2), .used_ghr1(used_ghr1), .used_ghr2(used_ghr2), .dual_branch(dual_branch));
 
 assign dpif.imemREN = 1'b1;
 assign control_pipe = (ex_mem1.memread | ex_mem1.memwrite | ex_mem2.memread | ex_mem2.memwrite) ? (dpif.dhit & dpif.ihit) : dpif.ihit;
@@ -159,7 +168,7 @@ assign rfif.rsel2_2 = cif2.rsel2;
 
 // ********************** PROGRAM COUNTER ************************** //
 logic stall; 
-assign stall = (branch1 || branch2 || cif1.jump || id_ex1.jalr || id_ex2.jalr) ? 1'b0 : stall_flag;
+assign stall = (branch_mispredicted1 || branch_mispredicted2 || cif1.jump || id_ex1.jalr || id_ex2.jalr) ? 1'b0 : stall_flag;
 // Don't stall the program counter if we are branching, or jumping
 always_ff @(posedge CLK, negedge nRST) begin
   if(!nRST) begin
@@ -168,6 +177,9 @@ always_ff @(posedge CLK, negedge nRST) begin
     pc <= next_pc;
   end
 end
+assign branch_inst1 = (dpif.imemload1[6:0] == 7'b1100011);
+assign branch_inst2 = (dpif.imemload2[6:0] == 7'b1100011);
+assign dual_branch = branch_inst1 & branch_inst2;
 
 //assign misalignment = dpif.ihit & !dpif.ihit2;
 
@@ -203,6 +215,9 @@ Multicore considerations ;
       if_id1.instruction <= dpif.imemload1; 
       if_id1.pc_add <= pc + 4;
       if_id1.curr_pc <= pc;
+      if_id1.branch_predicted <= branch_predicted1;
+      if_id1.same_pred <= same_pred1;
+      if_id1.used_ghr <= used_ghr1;
     end
   end
 
@@ -213,10 +228,15 @@ Multicore considerations ;
       if_id2 <= '0;
     end else if ((stall_flag || !if_id_write2 || !if_id_write1) & control_pipe) begin
       if_id2 <= if_id2;
+    end else if ((dual_branch || branch_predicted1) & control_pipe) begin
+      if_id2 <= '0;
     end else if (control_pipe & if_id_write2) begin
       if_id2.instruction <= dpif.imemload2; 
       if_id2.pc_add <= pc + 8;
       if_id2.curr_pc <= pc + 4;
+      if_id2.branch_predicted <= branch_predicted2;
+      if_id2.same_pred <= same_pred2;
+      if_id2.used_ghr <= used_ghr2;
     end
   end
   
@@ -266,9 +286,9 @@ end
   always_ff @(posedge CLK, negedge nRST) begin : ID_EX_LATCH1 
     if(!nRST) begin
       id_ex1 <= '0;
-    end else if (id_flush1 & control_pipe)
+    end else if (id_flush1 & control_pipe) begin 
       id_ex1 <= '0;
-    else if (control_pipe) begin
+    end else if (control_pipe) begin
         id_ex1.instruction <= if_id1.instruction;
         id_ex1.rdat1 <= rfif.rdat1_1;
         id_ex1.rdat2 <= rfif.rdat2_1;
@@ -294,6 +314,9 @@ end
         id_ex1.switch1 <= cif1.jalr | cif1.jump;
         id_ex1.datomic <= cif1.datomic;
         id_ex1.lrsc <= cif1.lrsc;
+        id_ex1.branch_predicted <= if_id1.branch_predicted;
+        id_ex1.same_pred <= if_id1.same_pred;
+        id_ex1.used_ghr <= id_ex1.used_ghr;
       end
   end
 
@@ -330,6 +353,9 @@ end
       id_ex2.switch1 <= cif2.jalr | cif2.jump;
       id_ex2.datomic <= cif2.datomic;
       id_ex2.lrsc <= cif2.lrsc;
+      id_ex2.branch_predicted <= if_id2.branch_predicted;
+      id_ex2.same_pred <= if_id2.same_pred;
+      id_ex2.used_ghr <= if_id2.used_ghr;
       end
   end
 
@@ -404,6 +430,7 @@ always_comb begin
     2'b01 : write_selected2 = id_ex2.u_type;
   endcase
 end
+assign id_ex1_branch = (id_ex1.branch_type != 2'd0);
 always_comb begin
   branch1 = 1'b0;
   casez(id_ex1.branch_type)
@@ -412,6 +439,7 @@ always_comb begin
     2'd3 : branch1 = !(($unsigned(aluif1.rda) >= $unsigned(aluif1.rdb)) ^ id_ex1.zero);
   endcase
 end
+assign id_ex2_branch = (id_ex2.branch_type != 2'd0);
 always_comb begin
   branch2 = 1'b0;
   casez(id_ex2.branch_type)
@@ -422,18 +450,26 @@ always_comb begin
 end
 
 // Check for stall flag, if stall flag is high, subtract the current pc by 4? Roll back by 
+assign branch_mispredicted1 = (branch1 != id_ex1.branch_predicted);
+assign branch_mispredicted2 = (branch2 != id_ex2.branch_predicted);
 always_comb begin
-    next_pc = pc + 8; //(!misalignment) ? pc + 8 : pc + 4; 
-    if((branch1 || branch2) || (id_ex1.jalr || id_ex2.jalr)) begin // priority since this is checked in execute stage
-      casez({(branch1 || branch2), id_ex1.jalr || id_ex2.jalr})
+    next_pc = predicted_pc;//pc + 8; //(!misalignment) ? pc + 8 : pc + 4; 
+    if((branch_mispredicted1 || branch_mispredicted2) || (id_ex1.jalr || id_ex2.jalr)) begin // priority since this is checked in execute stage
+      casez({(branch_mispredicted1 || branch_mispredicted2), id_ex1.jalr || id_ex2.jalr})
         2'd3 : begin
-          if(branch1 & id_ex2.jalr) begin
-            next_pc = id_ex1.curr_pc + id_ex1.imm_gen;
-          end else if (branch2 & id_ex1.jalr) begin
+          if(branch_mispredicted1 & id_ex2.jalr) begin
+            next_pc = (branch1) ? id_ex1.curr_pc + id_ex1.imm_gen : id_ex1.curr_pc + 4;
+          end else if (branch_mispredicted2 & id_ex1.jalr) begin
             next_pc = aluif1.result;
           end
         end
-        2'd2 : next_pc = (branch1) ? id_ex1.curr_pc + id_ex1.imm_gen : id_ex2.curr_pc + id_ex2.imm_gen;
+        2'd2 : begin 
+           if(branch_mispredicted1) begin
+            next_pc = (branch1) ? id_ex1.curr_pc + id_ex1.imm_gen : id_ex1.curr_pc + 4;//id_ex1.curr_pc + id_ex2.imm_gen;
+           end else begin
+            next_pc = (branch2) ? id_ex2.curr_pc + id_ex2.imm_gen : id_ex2.curr_pc + 4;
+           end
+        end
         2'd1 : next_pc = (id_ex1.jalr) ? aluif1.result : aluif2.result;
       endcase
     end else if (cif1.jump || (cif2.jump && !stall_flag)) begin // less priority since this is checked in decode (earlier resolution does not get priority)
