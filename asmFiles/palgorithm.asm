@@ -274,14 +274,14 @@ mainc2:
 
   addi a2, s2, 0 # move sum to a2
   addi a3, zero, 256 # move 256 to a3
-  #jal divide # divide sum by 256
-  srli a2, a2, 8
-  addi a0, a2, 0
+  jal divide # divide sum by 256
+  #srli a2, a2, 8
+  #addi a0, a2, 0
   #srli a3, a3, 8
   
-  sw s3, 0x700(zero)
-  sw s4, 0x704(zero)
-  sw a0, 0x708(zero) # Simulator bugs if you write to an address too large (it defaults to starting addresses)
+  sw s3, 0x1000(zero)
+  sw s4, 0x1004(zero)
+  sw a0, 0x1008(zero) # Simulator bugs if you write to an address too large (it defaults to starting addresses)
 
   #sw a0, 0x8000($0)
   pop   ra                    # get return address
