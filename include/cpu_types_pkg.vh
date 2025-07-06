@@ -35,9 +35,9 @@ package cpu_types_pkg;
   parameter AOP_W     = 4;
 
   // icache format widths
-  parameter ITAG_W    = 26;
+  parameter ITAG_W    = 25;
   parameter IIDX_W    = 4;
-  parameter IBLK_W    = 0; // <- important
+  parameter IBLK_W    = 1; // <- important
   parameter IBYT_W    = 2;
 
   // dcache format widths
@@ -203,6 +203,7 @@ package cpu_types_pkg;
     logic [ITAG_W-1:0]  tag;
     
     logic [IIDX_W-1:0]  idx;
+    logic[ IBLK_W-1:0]  blkoff;
     logic [IBYT_W-1:0]  bytoff;
   } icachef_t;
 
@@ -239,7 +240,7 @@ package cpu_types_pkg;
   typedef struct packed {
 	logic valid;
 	logic [ITAG_W - 1:0] tag;
-	word_t data;
+	word_t [1:0] data;
   } icache_frame;
 
 endpackage

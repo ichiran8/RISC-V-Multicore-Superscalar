@@ -12,14 +12,14 @@ funct3_b_t funct3_b;
 funct3_i_t funct3_i;
 funct7_r_t funct7_r;
 funct7_srla_r_t funct7_srla_r;
-funct5_atomic_t funct5_atomic;
 
+funct5_atomic_t funct5_atomic;
 assign funct3_r = funct3_r_t'(cif.instruction[14:12]);
 assign funct7_r = funct7_r_t'(cif.instruction[31:25]);
 assign funct3_i = funct3_i_t'(cif.instruction[14:12]);
-assign funct5_atomic = funct5_atomic_t'(cif.instruction[31:27]);
 
 assign funct3_b = funct3_b_t'(cif.instruction[14:12]);
+assign funct5_atomic = funct5_atomic_t'(cif.instruction[31:27]);
 
 //assign cif.funct3_b = funct3_b_t'(cif.instruction[14:12]);
 opcode_t opcode;
@@ -32,7 +32,7 @@ assign cif.wsel = cif.instruction[11:7];
 always_comb begin
     cif.imm_gen = 0;//{{20{cif.instruction[31]}}, cif.instruction[31:20]}; // NOT A CONTROL SIGNAL
     cif.alu_src = 1'b0; // choosing whether or not we take a value to r2 or immediate
-    cif.regwrite = 1; // determine whether or not we write into a register
+    cif.regwrite = 0; // determine whether or not we write into a register
     cif.memwrite = 0; // determine whether or not we write into memory
     cif.memread = 0; // determine whether or not we are reading from memory
     cif.memreg = 0; // determine whether or not we take the value from memory or the alu result to be written back 
@@ -44,10 +44,11 @@ always_comb begin
     cif.branch_type = 0;
     cif.lui = 1'b0;
     cif.zero = 1'b0;
-    cif.datomic = 1'b0;
     cif.lrsc = 1'b0;
+    cif.datomic = 1'b0;
     casez(opcode)
         RTYPE : begin
+            cif.regwrite = 1'b1;
             casez(funct3_r) 
                 ADD_SUB : cif.alu_op = (cif.instruction[30]) ? ALU_SUB : ALU_ADD;
                 SLL     : cif.alu_op = ALU_SLL;
@@ -62,6 +63,7 @@ always_comb begin
         ITYPE : begin
             cif.alu_src = 1'b1; // we are taking the immediate value
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:20]};
+            cif.regwrite = 1'b1;
             casez(funct3_i) 
                 //ADDI  : cif.alu_op = ALU_ADD;
                 SLLI  : cif.alu_op = ALU_SLL;
@@ -78,23 +80,24 @@ always_comb begin
             cif.memread = 1'b1; // we are reading from memory
             cif.memreg = 1'b1; // we are trying to take the value that we read from memory and place it into a reg
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:20]};
-
+            cif.regwrite = 1'b1;
         end
         JALR : begin // you are jumping to a label and also linking the return address to the jump of the label (?)
                      // JALR also can add using mux because rs1 will be 0 here (default case); make sure to add to write back block
             cif.alu_src = 1'b1; // we are taking the immediate value 
             cif.jalr = 1'b1;
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:20]};
+            cif.regwrite = 1'b1;
         end
         STYPE : begin // SW
             cif.alu_src = 1'b1; // we are taking the immediate value.
             cif.memwrite = 1'b1; // we are writing to memory 
-            cif.regwrite = 1'b0;
+            //cif.regwrite = 1'b0;
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[31:25], cif.instruction[11:7]};
 
         end 
         BTYPE : begin
-            cif.regwrite = 1'b0;
+            //cif.regwrite = 1'b0;
             cif.imm_gen = {{20{cif.instruction[31]}}, cif.instruction[7], cif.instruction[30:25], cif.instruction[11:8], 1'b0};
             casez(funct3_b) 
                 BEQ : begin
@@ -131,23 +134,23 @@ always_comb begin
         end
         JAL: begin // TO DO, add jump stuff for jalr and JAL; make sure to add to write back block
             cif.jump = 1'b1;
+            cif.regwrite = 1'b1;
             cif.imm_gen = {{12{cif.instruction[31]}}, cif.instruction[19:12], cif.instruction[20], cif.instruction[30:21], 1'b0};
 
         end
         LUI : begin
            // cif.alu_src = 1'b1;
             cif.lui = 1'b1;
+            cif.regwrite = 1'b1;
             cif.imm_gen = {cif.instruction[31:12], 12'd0};
 
         end
         AUIPC : begin // make sure to add to write back block
            // cif.alu_src = 1'b1;
             cif.cauipc = 1'b1;
+            cif.regwrite = 1'b1;
             cif.imm_gen = {cif.instruction[31:12], 12'd0};
 
-        end
-        HALT : begin // might remove later since it isnt needed here x.x
-            cif.halt = 1'b1;
         end
         LR_SC : begin
             cif.alu_src = 1'b1;
@@ -167,8 +170,13 @@ always_comb begin
                 end
             endcase
         end
+        HALT : begin // might remove later since it isnt needed here x.x
+            cif.halt = 1'b1;
+        end
     endcase
 end
 
 
 endmodule
+
+        

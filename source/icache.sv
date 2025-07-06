@@ -14,40 +14,30 @@ module icache(
 
     icache_frame [15:0] cache;
     icache_frame [15:0] next_cache;
-    typedef enum logic {IDLE, MEM} state_t;
+    typedef enum logic [1:0] {IDLE, MEM1, MEM2} state_t;
 
     state_t state, next_state;
-    icachef_t icheck;
+    icachef_t instr1, instr2;
 
-    assign icheck = dpif.imemaddr;
+    assign instr1 = dpif.imemaddr1;
+    assign instr2 = dpif.imemaddr2;
     
 
-
-    //assign icheck.tag = dpif.imemaddr[31:6];
-    //assign icheck.idx = dpif.imemaddr[5:2];
-    //assign icheck.bytoff = dpif.imemaddr[1:0];
-    // we fetch from the main memory when we get a memory miss
     logic next_iREN;
     word_t next_iaddr;
 
-    logic test_iREN;
-    word_t test_iaddr;
-
+    logic ihit1, ihit2;
     always_ff @(posedge CLK, negedge nRST) begin
         if(!nRST) begin
             state <= IDLE;
             cache <= '0;
             caif.iREN <= '0;
             caif.iaddr <= '0;
-            // test_iREN <= '0;
-            // test_iaddr  next_iaddr;
         end else begin
             state <= next_state;
             cache <= next_cache;
             caif.iREN <= next_iREN;
             caif.iaddr <= next_iaddr;
-            // test_iREN <= next_iREN;
-            // test_iaddr <= next_iaddr;
         end
     end
 
@@ -57,23 +47,33 @@ module icache(
         next_cache = cache;
         next_iaddr = caif.iaddr;
         next_iREN = caif.iREN;
-        // caif.iREN = 1'b0;
-        // caif.iaddr = '0;
         casez(state)
             IDLE : begin
                  if (!dpif.ihit && dpif.imemREN) begin
-                    next_state = MEM;
-                    next_iREN = 1'b1;  // if we were to register iREN and imemaddr, we would need to do this
-                    next_iaddr = dpif.imemaddr;
+                    next_state = MEM1;
+                    next_iREN = 1'b1;  
+                    next_iaddr = (!ihit1) ? {dpif.imemaddr1[31:3], 3'b0} : {dpif.imemaddr2[31:3], 3'b0};
                  end
             
             end
-            MEM : begin
-                // caif.iREN = 1'b1;
-                // caif.iaddr = dpif.imemaddr;
+            MEM1 : begin
+                // Bring the first word from memory for the block
                 if (!caif.iwait) begin
+                    next_state = MEM2;
+                    next_cache[caif.iaddr[6:3]].data[0] = caif.iload; //{1'b1, icheck.tag, caif.iload}; Do not set valid or tag bits yet
+                    next_iaddr = {caif.iaddr[31:3], 1'b1, 2'b0};
+                    next_iREN = 1'b1;
+                end
+            end
+            
+            MEM2 : begin
+                // Bring the second word from memory for the block 
+                if(!caif.iwait) begin
                     next_state = IDLE;
-                    next_cache[icheck.idx] = {1'b1, icheck.tag, caif.iload};
+                    next_cache[caif.iaddr[6:3]].data[1] = caif.iload;
+                    next_cache[caif.iaddr[6:3]].valid = 1'b1;
+                    next_cache[caif.iaddr[6:3]].tag = caif.iaddr[31:7];
+                    next_iaddr = '0;
                     next_iREN = 1'b0;
                 end
             end
@@ -82,6 +82,23 @@ module icache(
 
     // tag width is 26 bits 
     // index is pc [5:2]
-    assign dpif.ihit = (dpif.imemREN && cache[icheck.idx].valid && (cache[icheck.idx].tag == icheck.tag)); // if there is a valid bit
-    assign dpif.imemload = cache[icheck.idx].data;
+
+
+// Might need to update since it is possbile for the first instruction to read the BLKOFFSET
+// Either that or I have four word blocks 
+
+/*
+OK, we are having four word blocks just to make sure accesses occur?
+Not sure
+
+*/
+    assign ihit1 = (dpif.imemREN && cache[instr1.idx].valid && (cache[instr1.idx].tag == instr1.tag)); // if there is a valid bit
+    //assign dpif.ihit2 = (dpif.imemREN && cache[instr2.idx].valid && (cache[instr2.idx].tag == instr2.tag));
+    assign ihit2 = (dpif.imemREN && cache[instr2.idx].valid && (cache[instr2.idx].tag == instr2.tag));
+    //assign dpif.ihit = ihit1; // && ihit2;
+    assign dpif.ihit = ihit1 & ihit2;
+    assign dpif.imemload1 = cache[instr1.idx].data[instr1.blkoff];
+    // assign dpif.imemload2 = (dpif.ihit2) ? cache[instr2.idx].data[instr2.blkoff] : '0;
+    assign dpif.imemload2 = cache[instr2.idx].data[instr2.blkoff];
+
 endmodule

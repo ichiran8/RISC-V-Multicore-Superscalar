@@ -7,7 +7,7 @@ module bus_control(
     cache_control_if.cc cc
 );
 typedef enum logic [4:0] {
-    IDLE, IFETCH, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, CACHE_MEM_UPDATE_1, CACHE_MEM_UPDATE_2, CACHE_INVALIDATE, WAIT_FETCH, WAIT_MEM, CACHE_INVALIDATE_CHECK
+    IDLE, IFETCH1, IBUF, IFETCH2, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, CACHE_MEM_UPDATE_1, CACHE_MEM_UPDATE_2, CACHE_INVALIDATE, WAIT_FETCH, WAIT_MEM, CACHE_INVALIDATE_CHECK
 } state_t;
 state_t state, next_state;
 //word_t next_snoop_addr0, next_snoop_addr1;
@@ -136,7 +136,7 @@ always_comb begin
                 end
             end 
             else if (inst_read && !cc.cctrans) begin // instruction read
-                next_state = IFETCH;
+                next_state = IFETCH1;
                 next_ramREN = 1'b1;
                 if(cc.iREN[0] && cc.iREN[1]) begin // basic case
                     next_lru = !lru;
@@ -158,7 +158,23 @@ always_comb begin
                 end
             end
         end
-        IFETCH: begin
+        IFETCH1: begin
+            next_ramREN = 1'b1;
+            if(cc.ramstate == ACCESS) begin
+                next_state = IBUF;
+                next_ramREN = 1'b0; //1'b1;
+                next_ramaddr = cc.iaddr[core];
+                cc.iwait[core] = 1'b0;
+                cc.iload[core] = cc.ramload;
+            end
+        end
+        IBUF: begin
+            next_state = IFETCH2;
+            next_ramREN = 1'b1;
+            next_ramaddr = cc.iaddr[core];
+            //cc.iload[core] = cc.ramload;
+        end
+        IFETCH2: begin
             next_ramREN = 1'b1;
             if(cc.ramstate == ACCESS) begin
                 next_state = IDLE;
@@ -167,6 +183,7 @@ always_comb begin
                 cc.iwait[core] = 1'b0;
                 cc.iload[core] = cc.ramload;
             end
+            
         end
         D_UPDATE_1: begin
             next_ramWEN = 1'b1;
@@ -244,7 +261,7 @@ always_comb begin
                 next_state = IDLE;
                 next_ramaddr = 0;
                 cc.dwait[core] = 1'b0;
-                next_ccwait[!core] = 1'b1;
+                //next_ccwait[!core] = 1'b1;
             end
         end
         CACHE_MEM_UPDATE_1: begin  // update cache and mem because other cache is in MODIFIED state
@@ -286,6 +303,7 @@ always_comb begin
         CACHE_UPDATE_2: begin
             cc.dwait = 2'b0;
             cc.dload[core] = cc.dstore[!core];
+            cc.dwait[core] = 1'b0;
             next_state = (cc.ccwrite[core]) ? CACHE_INVALIDATE : IDLE;
         end
     endcase

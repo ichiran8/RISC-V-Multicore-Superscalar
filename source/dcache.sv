@@ -187,7 +187,7 @@ always_comb begin : OUTPUT_LOGIC
     // next_hit_counter = hit_counter;
     next_flush_timer = flush_timer;
 
-    next_ccwrite = !ccif.ccwait && next_state != terminate && next_state != wait_flush ? dpif.dmemWEN : 0;
+    next_ccwrite = !ccif.ccwait && next_state != terminate && next_state != wait_flush && (state != flush1 && state != flush2) ? dpif.dmemWEN : 0;
 
     next_res_set = res_set;
     next_valid_res_set = valid_res_set;
