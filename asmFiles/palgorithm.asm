@@ -281,7 +281,7 @@ mainc2:
   
   sw s3, 0x700(zero)
   sw s4, 0x704(zero)
-  sw a0, 0x708(zero)
+  sw a0, 0x708(zero) # Simulator bugs if you write to an address too large (it defaults to starting addresses)
 
   #sw a0, 0x8000($0)
   pop   ra                    # get return address
