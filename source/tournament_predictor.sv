@@ -13,30 +13,33 @@ module tournament_predictor(
 
 
 // pseudo code
-typedef struct packed {
-    logic [1:0] ctr;
-} GPHT;
-GPHT [63:0] global_pattern_history_table, next_GPHT;
+// typedef struct packed {
+//     logic [1:0] ctr;
+// } GPHT;
+// GPHT [63:0] global_pattern_history_table, next_GPHT;
+logic [63:0][1:0] global_pattern_history_table, next_GPHT;
 
 logic [5:0] global_history_register;
 
-typedef struct packed {
-    logic [1:0] ctr;
-} PHT;
+// typedef struct packed {
+//     logic [1:0] ctr;
+// } PHT;
 
-PHT [63:0] local_pattern_history_table, next_LPHT;
+// PHT [63:0] local_pattern_history_table, next_LPHT;
+logic [63:0][1:0] local_pattern_history_table, next_LPHT;
+// typedef struct packed {
+//     logic [5:0] hist;
+// } BHT;
 
-typedef struct packed {
-    logic [5:0] hist;
-} BHT;
+// BHT [63:0] branch_history_table, next_BHT;
+logic [63:0][5:0] branch_history_table, next_BHT;
 
-BHT [63:0] branch_history_table, next_BHT;
+// typedef struct packed {
+//     logic [1:0] ctr; // if the counter is >= 2, use gshare. Otherwise, use local history
+// } T_PRED;
 
-typedef struct packed {
-    logic [1:0] ctr; // if the counter is >= 2, use gshare. Otherwise, use local history
-} T_PRED;
-
-T_PRED [63:0] tournament_table, next_TT;
+// T_PRED [63:0] tournament_table, next_TT;
+logic [63:0][1:0] tournament_table, next_TT;
 
 typedef struct packed {
     logic [31:0] addr;
@@ -80,32 +83,32 @@ always_comb begin
     if(id_ex1_branch) begin
         next_BTB[next_index1].addr = target1; // update the buffer to store the target
         next_BTB[next_index1].valid = 1'b1; // make sure it is a valid entry 
-        next_BHT[next_index1].hist = {branch_history_table[next_index1].hist[4:0], branch1}; // we update the branch history table entry   
+        next_BHT[next_index1] = {branch_history_table[next_index1][4:0], branch1}; // we update the branch history table entry   
     end else if(id_ex2_branch) begin
         next_BTB[next_index2].addr = target2;
         next_BTB[next_index2].valid = 1'b1;
-        next_BHT[next_index2].hist = {branch_history_table[next_index2].hist[4:0], branch2};
+        next_BHT[next_index2] = {branch_history_table[next_index2][4:0], branch2};
     end 
 end
 
 
 // logic [1:0] output_index_update;
-// assign output_index_update = global_pattern_history_table[global_history_register ^ next_index].ctr;
+// assign output_index_update = global_pattern_history_table[global_history_register ^ next_index];
 always_comb begin // branch prediction table state transition ; tag bits
     next_GPHT = global_pattern_history_table;
     if(id_ex1_branch) begin // only update if it is a branch 
-        casez(global_pattern_history_table[prev_ghr1 ^ next_index1].ctr)
-            2'b00 : next_GPHT[prev_ghr1 ^ next_index1].ctr = (branch1) ? {2'b10} : {2'b01}; // branch not taken soft
-            2'b01 : next_GPHT[prev_ghr1 ^ next_index1].ctr = (branch1) ? {2'b00} : {2'b01}; // branch not taken hard
-            2'b10 : next_GPHT[prev_ghr1 ^ next_index1].ctr = (branch1) ? {2'b11} : {2'b00}; // branch taken soft
-            2'b11 : next_GPHT[prev_ghr1 ^ next_index1].ctr = (branch1) ? {2'b11} : {2'b10}; // branch taken hard
+        casez(global_pattern_history_table[prev_ghr1 ^ next_index1])
+            2'b00 : next_GPHT[prev_ghr1 ^ next_index1] = (branch1) ? {2'b10} : {2'b01}; // branch not taken soft
+            2'b01 : next_GPHT[prev_ghr1 ^ next_index1] = (branch1) ? {2'b00} : {2'b01}; // branch not taken hard
+            2'b10 : next_GPHT[prev_ghr1 ^ next_index1] = (branch1) ? {2'b11} : {2'b00}; // branch taken soft
+            2'b11 : next_GPHT[prev_ghr1 ^ next_index1] = (branch1) ? {2'b11} : {2'b10}; // branch taken hard
         endcase
     end else if(id_ex2_branch) begin // only update if it is a branch 
-        casez(global_pattern_history_table[global_history_register ^ next_index2].ctr)
-            2'b00 : next_GPHT[prev_ghr2 ^ next_index2].ctr = (branch2) ? {2'b10} : {2'b01}; // branch not taken soft
-            2'b01 : next_GPHT[prev_ghr2 ^ next_index2].ctr = (branch2) ? {2'b00} : {2'b01}; // branch not taken hard
-            2'b10 : next_GPHT[prev_ghr2 ^ next_index2].ctr = (branch2) ? {2'b11} : {2'b00}; // branch taken soft
-            2'b11 : next_GPHT[prev_ghr2 ^ next_index2].ctr = (branch2) ? {2'b11} : {2'b10}; // branch taken hard
+        casez(global_pattern_history_table[global_history_register ^ next_index2])
+            2'b00 : next_GPHT[prev_ghr2 ^ next_index2] = (branch2) ? {2'b10} : {2'b01}; // branch not taken soft
+            2'b01 : next_GPHT[prev_ghr2 ^ next_index2] = (branch2) ? {2'b00} : {2'b01}; // branch not taken hard
+            2'b10 : next_GPHT[prev_ghr2 ^ next_index2] = (branch2) ? {2'b11} : {2'b00}; // branch taken soft
+            2'b11 : next_GPHT[prev_ghr2 ^ next_index2] = (branch2) ? {2'b11} : {2'b10}; // branch taken hard
         endcase
     end
 end
@@ -114,18 +117,18 @@ end
 always_comb begin // branch prediction table state transition ; tag bits
     next_LPHT = local_pattern_history_table;
     if(id_ex1_branch) begin // only update if it is a branch 
-        casez(local_pattern_history_table[branch_history_table[next_index1]].ctr)
-            2'b00 : next_LPHT[branch_history_table[next_index1]].ctr = (branch1) ? {2'b10} : {2'b01}; // branch not taken soft
-            2'b01 : next_LPHT[branch_history_table[next_index1]].ctr = (branch1) ? {2'b00} : {2'b01}; // branch not taken hard
-            2'b10 : next_LPHT[branch_history_table[next_index1]].ctr = (branch1) ? {2'b11} : {2'b00}; // branch taken soft
-            2'b11 : next_LPHT[branch_history_table[next_index1]].ctr = (branch1) ? {2'b11} : {2'b10}; // branch taken hard
+        casez(local_pattern_history_table[branch_history_table[next_index1]])
+            2'b00 : next_LPHT[branch_history_table[next_index1]] = (branch1) ? {2'b10} : {2'b01}; // branch not taken soft
+            2'b01 : next_LPHT[branch_history_table[next_index1]] = (branch1) ? {2'b00} : {2'b01}; // branch not taken hard
+            2'b10 : next_LPHT[branch_history_table[next_index1]] = (branch1) ? {2'b11} : {2'b00}; // branch taken soft
+            2'b11 : next_LPHT[branch_history_table[next_index1]] = (branch1) ? {2'b11} : {2'b10}; // branch taken hard
         endcase
     end else if(id_ex2_branch) begin // only update if it is a branch 
-        casez(local_pattern_history_table[branch_history_table[next_index2]].ctr)
-            2'b00 : next_LPHT[branch_history_table[next_index2]].ctr = (branch2) ? {2'b10} : {2'b01}; // branch not taken soft
-            2'b01 : next_LPHT[branch_history_table[next_index2]].ctr = (branch2) ? {2'b00} : {2'b01}; // branch not taken hard
-            2'b10 : next_LPHT[branch_history_table[next_index2]].ctr = (branch2) ? {2'b11} : {2'b00}; // branch taken soft
-            2'b11 : next_LPHT[branch_history_table[next_index2]].ctr = (branch2) ? {2'b11} : {2'b10}; // branch taken hard
+        casez(local_pattern_history_table[branch_history_table[next_index2]])
+            2'b00 : next_LPHT[branch_history_table[next_index2]] = (branch2) ? {2'b10} : {2'b01}; // branch not taken soft
+            2'b01 : next_LPHT[branch_history_table[next_index2]] = (branch2) ? {2'b00} : {2'b01}; // branch not taken hard
+            2'b10 : next_LPHT[branch_history_table[next_index2]] = (branch2) ? {2'b11} : {2'b00}; // branch taken soft
+            2'b11 : next_LPHT[branch_history_table[next_index2]] = (branch2) ? {2'b11} : {2'b10}; // branch taken hard
         endcase
     end
 end
@@ -138,17 +141,17 @@ logic [5:0] output_index;
 
 assign output_index = (if_id1_branch) ? global_history_register ^ index1 : global_history_register ^ index2;
 
-logic chosen_predictor;
+logic [1:0] chosen_predictor;
 always_comb begin
     chosen_predictor = 0;
     if(if_id1_branch) begin
-        if(tournament_table[index1].ctr[1]) begin
+        if(tournament_table[index1][1]) begin
             chosen_predictor = 2'd2; // use gshare predictor
         end else begin
             chosen_predictor = 2'd1; // use local history predictor 
         end
     end else if (if_id2_branch) begin
-        if(tournament_table[index2].ctr[1]) begin
+        if(tournament_table[index2][1]) begin
             chosen_predictor = 2'd2;
         end else begin
             chosen_predictor = 2'd1;
@@ -157,10 +160,10 @@ always_comb begin
 end
 
 logic g_pred1, l_pred1, g_pred2, l_pred2;
-assign g_pred1 = global_pattern_history_table[global_history_register ^ index1].ctr[1];
-assign l_pred1 = local_pattern_history_table[branch_history_table[index1].hist].ctr[1];
-assign g_pred2 = global_pattern_history_table[global_history_register ^ index2].ctr[1];
-assign l_pred2 = local_pattern_history_table[branch_history_table[index2].hist].ctr[1];
+assign g_pred1 = global_pattern_history_table[global_history_register ^ index1][1];
+assign l_pred1 = local_pattern_history_table[branch_history_table[index1]][1];
+assign g_pred2 = global_pattern_history_table[global_history_register ^ index2][1];
+assign l_pred2 = local_pattern_history_table[branch_history_table[index2]][1];
 
 assign same_pred1 = (g_pred1 == l_pred1);
 assign same_pred2 = (g_pred2 == l_pred2);
@@ -172,7 +175,7 @@ always_comb begin
     // instruction 1
     if(if_id1_branch && branch_target_buffer[index1].valid) begin
         if(chosen_predictor == 2'd2) begin
-            if(global_pattern_history_table[output_index].ctr[1]) begin
+            if(global_pattern_history_table[output_index][1]) begin
                 predicted_pc = branch_target_buffer[index1].addr;
                 branch_predicted1 = 1'b1;
             end else begin
@@ -180,7 +183,7 @@ always_comb begin
                 branch_predicted1 = 1'b0;
             end
         end else begin
-            if(local_pattern_history_table[branch_history_table[index1].hist].ctr[1]) begin
+            if(local_pattern_history_table[branch_history_table[index1]][1]) begin
                 predicted_pc = branch_target_buffer[index1].addr;
                 branch_predicted1 = 1'b1;
             end else begin
@@ -191,7 +194,7 @@ always_comb begin
     // instruction 2
     end else if(if_id2_branch && branch_target_buffer[index2].valid) begin
         if(chosen_predictor == 2'd2) begin
-            if(global_pattern_history_table[output_index].ctr[1]) begin
+            if(global_pattern_history_table[output_index][1]) begin
                 predicted_pc = branch_target_buffer[index2].addr;
                 branch_predicted2 = 1'b1;
             end else begin
@@ -199,7 +202,7 @@ always_comb begin
                 branch_predicted2 = 1'b0;
             end
         end else begin
-            if(local_pattern_history_table[branch_history_table[index2].hist].ctr[1]) begin
+            if(local_pattern_history_table[branch_history_table[index2]][1]) begin
                 predicted_pc = branch_target_buffer[index2].addr;
                 branch_predicted2 = 1'b1;
             end else begin
@@ -219,18 +222,18 @@ end
 always_comb begin // branch prediction table state transition ; tag bits
     next_TT = tournament_table;
     if(id_ex1_branch && !prev_same_pred1) begin // only update if it is a branch 
-        casez(tournament_table[next_index1].ctr)
-            2'b00 : next_TT[next_index1].ctr = (branch_mispredicted1) ? {2'b10} : {2'b01}; // branch not taken soft
-            2'b01 : next_TT[next_index1].ctr = (branch_mispredicted1) ? {2'b00} : {2'b01}; // branch not taken hard
-            2'b10 : next_TT[next_index1].ctr = (branch_mispredicted1) ? {2'b00} : {2'b11}; // branch taken soft
-            2'b11 : next_TT[next_index1].ctr = (branch_mispredicted1) ? {2'b10} : {2'b11}; // branch taken hard
+        casez(tournament_table[next_index1])
+            2'b00 : next_TT[next_index1] = (branch_mispredicted1) ? 2'b10 : 2'b01; // branch not taken soft
+            2'b01 : next_TT[next_index1] = (branch_mispredicted1) ? 2'b00 : 2'b01; // branch not taken hard
+            2'b10 : next_TT[next_index1] = (branch_mispredicted1) ? 2'b00 : 2'b11; // branch taken soft
+            2'b11 : next_TT[next_index1] = (branch_mispredicted1) ? 2'b10 : 2'b11; // branch taken hard
         endcase
     end else if(id_ex2_branch && !prev_same_pred2) begin // only update if it is a branch 
-        casez(tournament_table[next_index2].ctr)
-            2'b00 : next_TT[next_index2].ctr = (branch_mispredicted2) ? {2'b10} : {2'b01}; // branch not taken soft
-            2'b01 : next_TT[next_index2].ctr = (branch_mispredicted2) ? {2'b00} : {2'b01}; // branch not taken hard
-            2'b10 : next_TT[next_index2].ctr = (branch_mispredicted2) ? {2'b00} : {2'b11}; // branch taken soft
-            2'b11 : next_TT[next_index2].ctr = (branch_mispredicted2) ? {2'b10} : {2'b11}; // branch taken hard
+        casez(tournament_table[next_index2])
+            2'b00 : next_TT[next_index2] = (branch_mispredicted2) ? 2'b10 : 2'b01; // branch not taken soft
+            2'b01 : next_TT[next_index2] = (branch_mispredicted2) ? 2'b00 : 2'b01; // branch not taken hard
+            2'b10 : next_TT[next_index2] = (branch_mispredicted2) ? 2'b00 : 2'b11; // branch taken soft
+            2'b11 : next_TT[next_index2] = (branch_mispredicted2) ? 2'b10 : 2'b11; // branch taken hard
         endcase
     end
 end
