@@ -25,6 +25,9 @@ module icache(
 
     logic next_iREN;
     word_t next_iaddr;
+    logic [3:0] addr_index;
+    logic [24:0] addr_tag;
+    logic [1:0] addr_bytoff;
 
     logic ihit1, ihit2;
     always_ff @(posedge CLK, negedge nRST) begin
@@ -41,7 +44,9 @@ module icache(
         end
     end
 
-
+    assign addr_tag = caif.iaddr[31:7];
+    assign addr_index = caif.iaddr[6:3];
+    assign addr_bytoff = caif.iaddr[1:0];
     always_comb begin // state machine
         next_state = state;
         next_cache = cache;
@@ -52,16 +57,15 @@ module icache(
                  if (!dpif.ihit && dpif.imemREN) begin
                     next_state = MEM1;
                     next_iREN = 1'b1;  
-                    next_iaddr = (!ihit1) ? {dpif.imemaddr1[31:3], 3'b0} : {dpif.imemaddr2[31:3], 3'b0};
+                    next_iaddr = (!ihit1) ? {dpif.imemaddr1[31:3], 1'b0, dpif.imemaddr1[1:0]} : {dpif.imemaddr2[31:3], 1'b0, dpif.imemaddr2[1:0]};
                  end
-            
             end
             MEM1 : begin
                 // Bring the first word from memory for the block
                 if (!caif.iwait) begin
                     next_state = MEM2;
-                    next_cache[caif.iaddr[6:3]].data[0] = caif.iload; //{1'b1, icheck.tag, caif.iload}; Do not set valid or tag bits yet
-                    next_iaddr = {caif.iaddr[31:3], 1'b1, 2'b0};
+                    next_cache[addr_index].data[0] = caif.iload; //{1'b1, icheck.tag, caif.iload}; Do not set valid or tag bits yet
+                    next_iaddr = {addr_tag, addr_index, 1'b1, addr_bytoff};
                     next_iREN = 1'b1;
                 end
             end
@@ -70,9 +74,9 @@ module icache(
                 // Bring the second word from memory for the block 
                 if(!caif.iwait) begin
                     next_state = IDLE;
-                    next_cache[caif.iaddr[6:3]].data[1] = caif.iload;
-                    next_cache[caif.iaddr[6:3]].valid = 1'b1;
-                    next_cache[caif.iaddr[6:3]].tag = caif.iaddr[31:7];
+                    next_cache[addr_index].data[1] = caif.iload;
+                    next_cache[addr_index].valid = 1'b1;
+                    next_cache[addr_index].tag = addr_tag;//caif.iaddr[31:7];
                     next_iaddr = '0;
                     next_iREN = 1'b0;
                 end
@@ -80,25 +84,11 @@ module icache(
         endcase
     end
 
-    // tag width is 26 bits 
-    // index is pc [5:2]
 
-
-// Might need to update since it is possbile for the first instruction to read the BLKOFFSET
-// Either that or I have four word blocks 
-
-/*
-OK, we are having four word blocks just to make sure accesses occur?
-Not sure
-
-*/
     assign ihit1 = (dpif.imemREN && cache[instr1.idx].valid && (cache[instr1.idx].tag == instr1.tag)); // if there is a valid bit
-    //assign dpif.ihit2 = (dpif.imemREN && cache[instr2.idx].valid && (cache[instr2.idx].tag == instr2.tag));
     assign ihit2 = (dpif.imemREN && cache[instr2.idx].valid && (cache[instr2.idx].tag == instr2.tag));
-    //assign dpif.ihit = ihit1; // && ihit2;
     assign dpif.ihit = ihit1 & ihit2;
     assign dpif.imemload1 = cache[instr1.idx].data[instr1.blkoff];
-    // assign dpif.imemload2 = (dpif.ihit2) ? cache[instr2.idx].data[instr2.blkoff] : '0;
     assign dpif.imemload2 = cache[instr2.idx].data[instr2.blkoff];
 
 endmodule

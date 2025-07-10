@@ -163,7 +163,7 @@ always_comb begin
             if(cc.ramstate == ACCESS) begin
                 next_state = IBUF;
                 next_ramREN = 1'b0; //1'b1;
-                next_ramaddr = cc.iaddr[core];
+                //next_ramaddr = cc.iaddr[core];
                 cc.iwait[core] = 1'b0;
                 cc.iload[core] = cc.ramload;
             end
@@ -261,7 +261,7 @@ always_comb begin
                 next_state = IDLE;
                 next_ramaddr = 0;
                 cc.dwait[core] = 1'b0;
-                //next_ccwait[!core] = 1'b1;
+                next_ccwait[!core] = 1'b1;
             end
         end
         CACHE_MEM_UPDATE_1: begin  // update cache and mem because other cache is in MODIFIED state
@@ -303,7 +303,7 @@ always_comb begin
         CACHE_UPDATE_2: begin
             cc.dwait = 2'b0;
             cc.dload[core] = cc.dstore[!core];
-            cc.dwait[core] = 1'b0;
+            //cc.dwait[core] = 1'b0;
             next_state = (cc.ccwrite[core]) ? CACHE_INVALIDATE : IDLE;
         end
     endcase

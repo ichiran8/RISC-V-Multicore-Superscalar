@@ -24,23 +24,23 @@ always_comb begin
     forwardA = 0;
     forwardB = 0;
 
-    if((ex_mem_regwrite2 && (ex_mem_wsel2 != 0)) & (ex_mem_wsel2 == id_ex_rsel1)) begin
+    if((ex_mem_regwrite2 && (ex_mem_wsel2 != 0)) && (ex_mem_wsel2 == id_ex_rsel1)) begin
         forwardA = 3'd3;
-    end else if ((ex_mem_regwrite1 && (ex_mem_wsel1 != 0)) & (ex_mem_wsel1 == id_ex_rsel1)) begin
+    end else if ((ex_mem_regwrite1 && (ex_mem_wsel1 != 0)) && (ex_mem_wsel1 == id_ex_rsel1)) begin
         forwardA = 3'd2;
-    end else if ((mem_wb_regwrite2 && (mem_wb_wsel2 != 0)) & (mem_wb_wsel2 == id_ex_rsel1)) begin
+    end else if ((mem_wb_regwrite2 && (mem_wb_wsel2 != 0)) && (mem_wb_wsel2 == id_ex_rsel1)) begin
         forwardA = 3'd4;
-    end else if ((mem_wb_regwrite1 && (mem_wb_wsel1 != 0)) & (mem_wb_wsel1 == id_ex_rsel1)) begin
+    end else if ((mem_wb_regwrite1 && (mem_wb_wsel1 != 0)) && (mem_wb_wsel1 == id_ex_rsel1)) begin
         forwardA = 3'd1;
     end
 
     if((ex_mem_regwrite2 && (ex_mem_wsel2 != 0)) & (ex_mem_wsel2 == id_ex_rsel2)) begin
         forwardB = 3'd3;
-    end else if ((ex_mem_regwrite1 && (ex_mem_wsel1 != 0)) & (ex_mem_wsel1 == id_ex_rsel2)) begin
+    end else if ((ex_mem_regwrite1 && (ex_mem_wsel1 != 0)) && (ex_mem_wsel1 == id_ex_rsel2)) begin
         forwardB = 3'd2;
-    end else if ((mem_wb_regwrite2 && (mem_wb_wsel2 != 0)) & (mem_wb_wsel2 == id_ex_rsel2)) begin
+    end else if ((mem_wb_regwrite2 && (mem_wb_wsel2 != 0)) && (mem_wb_wsel2 == id_ex_rsel2)) begin
         forwardB = 3'd4;
-    end else if ((mem_wb_regwrite1 && (mem_wb_wsel1 != 0)) & (mem_wb_wsel1 == id_ex_rsel2)) begin
+    end else if ((mem_wb_regwrite1 && (mem_wb_wsel1 != 0)) && (mem_wb_wsel1 == id_ex_rsel2)) begin
         forwardB = 3'd1;
     end
 end

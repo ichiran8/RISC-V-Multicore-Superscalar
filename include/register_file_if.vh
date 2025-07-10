@@ -15,7 +15,7 @@ interface register_file_if;
   import cpu_types_pkg::*;
 
   logic     WEN1, WEN2;
-  regbits_t wsel1, wsel2, rsel1_1, rsel2_1, rsel1_2, rsel2_2;
+  regbits_t wsel1, wsel2, rsel1_1, rsel1_2, rsel2_1, rsel2_2;
   word_t    wdat1, wdat2, rdat1_1, rdat1_2, rdat2_1, rdat2_2;
 
   // register file ports

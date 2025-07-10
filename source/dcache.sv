@@ -76,6 +76,7 @@ logic valid_res_set;
 
 logic[31:0] next_res_set;
 logic next_valid_res_set;
+logic prev_dwait;
 
 always_comb begin : NEXT_STATE_LOGIC
     next_state = state;
@@ -144,6 +145,7 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         prev_state <= request;
         res_set <= '0;
         valid_res_set <= '0;
+        prev_dwait <= 0;
     end
     else begin
         frame <= next_frame;
@@ -161,6 +163,7 @@ always_ff @(posedge CLK, negedge nRST) begin : REG_LOGIC
         res_set <= next_res_set;
         valid_res_set <= next_valid_res_set;
         prev_state <= state;
+        prev_dwait <= ccif.dwait;
     end
 end
 
@@ -187,7 +190,7 @@ always_comb begin : OUTPUT_LOGIC
     // next_hit_counter = hit_counter;
     next_flush_timer = flush_timer;
 
-    next_ccwrite = !ccif.ccwait && next_state != terminate && next_state != wait_flush && (state != flush1 && state != flush2) && ccif.ccwrite != 1 ? dpif.dmemWEN : 0;
+    next_ccwrite = 1'b0; //!ccif.ccwait && next_state != terminate && next_state != wait_flush dpif.dmemWEN : 0;
 
     next_res_set = res_set;
     next_valid_res_set = valid_res_set;
@@ -215,7 +218,8 @@ always_comb begin : OUTPUT_LOGIC
                             next_frame[req.idx][frame_select[1]].dirty = 1;
                             next_frame[req.idx][frame_select[1]].valid = 1;
                             next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
-                            dpif.dhit = !(ccif.dwait) & ccif.ccwrite; // we need to make sure it gets invalidated before returning a hit.
+                            next_ccwrite = ((prev_dwait) & !(ccif.dwait)) ? 1'b0 : 1'b1;
+                            dpif.dhit = !(ccif.dwait) && ccif.ccwrite; // we need to make sure it gets invalidated before returning a hit.
                             // next_ccwrite = 1; // check, might be enough without at access1
                             
                             if(dpif.datomic) begin
@@ -236,6 +240,7 @@ always_comb begin : OUTPUT_LOGIC
                 end
                 if(next_state == update1) begin
                     next_dWEN = 1;
+                    next_ccwrite = 1'b1;
                     next_dstore = frame[req.idx][lru[req.idx]].data[0];
                     next_daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b0, req.bytoff}; // check this
                 end
@@ -247,6 +252,7 @@ always_comb begin : OUTPUT_LOGIC
                 //     next_cctrans = 1;
                 if(next_state == access1) begin
                     next_dREN = 1;
+                    next_ccwrite = 1'b0; //(dpif.dmemWEN);
                     next_daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
 
                     // here, make request to bus
@@ -255,11 +261,13 @@ always_comb begin : OUTPUT_LOGIC
             update1: begin
                 if(next_state == update1) begin
                     next_dWEN = 1;
+                    next_ccwrite = 1'b1;
                     next_dstore = frame[req.idx][lru[req.idx]].data[0];
                     next_daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b0, req.bytoff}; // check this
                 end
                 if(next_state == update2) begin
                     next_dWEN = 1;
+                    next_ccwrite = 1'b1;
                     next_dstore = frame[req.idx][lru[req.idx]].data[1];
                     next_daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b1, req.bytoff}; // check this
                 end
@@ -267,11 +275,13 @@ always_comb begin : OUTPUT_LOGIC
             update2: begin
                 if(next_state == update2) begin
                     next_dWEN = 1;
+                    next_ccwrite = 1'b1;
                     next_dstore = frame[req.idx][lru[req.idx]].data[1];
                     next_daddr = {frame[req.idx][lru[req.idx]].tag, req.idx, 1'b1, req.bytoff}; // check this
                 end
                 if(next_state == access1) begin
                     next_dREN = 1;
+                    next_ccwrite = dpif.dmemWEN;
                     next_daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
                 end
             end
@@ -283,6 +293,7 @@ always_comb begin : OUTPUT_LOGIC
                     next_frame[req.idx][lru[req.idx]].valid = 1;
                     next_frame[req.idx][lru[req.idx]].dirty = 1;
                     next_lru[req.idx] = !lru[req.idx]; // set other frame to be least recently used
+                    next_ccwrite = 1'b0;
 
                     // next_hit_counter = hit_counter - 1;
 
@@ -291,12 +302,14 @@ always_comb begin : OUTPUT_LOGIC
                 else if(next_state == access2) begin
                     next_frame[req.idx][lru[req.idx]].data[!req.blkoff] = ccif.dload;
                     next_dREN = 1;
+                    next_ccwrite = dpif.dmemWEN;
                     next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
                     
                     // here, make request to bus
                 end
                 else if(next_state == access1) begin
                     next_dREN = 1;
+                    next_ccwrite = dpif.dmemWEN;
                     next_daddr = {req.tag, req.idx, !req.blkoff, req.bytoff}; // get the data you don't have first
 
                     // here, make request to bus
@@ -315,6 +328,7 @@ always_comb begin : OUTPUT_LOGIC
 
                 if(next_state == access2) begin
                     next_dREN = 1;
+                    next_ccwrite = dpif.dmemWEN;
                     next_daddr = {req.tag, req.idx, req.blkoff, req.bytoff};
 
                     // here, make request to bus
@@ -381,6 +395,7 @@ always_comb begin : OUTPUT_LOGIC
         // end
         next_dREN = 1'b0; //ccif.dREN;
         next_dWEN = 1'b0; //ccif.dWEN;
+        next_ccwrite = 1'b0;
         if(ccif.ccinv) begin
             if(snoop_select != 2'd0)
                 next_frame[snoop.idx][snoop_select[1]].valid = 1'b0; //(snoop_select == 2'd0);

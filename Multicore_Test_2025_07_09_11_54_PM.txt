@@ -1,0 +1,25 @@
+Multicore Assembly Test Case Report File 2025_07_09_11_54_PM
+**************************************** TEST FOR LAT = 0 ****************************************
+ 
+Testing Lat = 0 for testcase test.coherence1.asm!
+ 
+Test Case Passed!
+ 
+Testing Lat = 0 for testcase test.coherence2.asm!
+ 
+Test Case Passed!
+ 
+Testing Lat = 0 for testcase dual.llsc.asm!
+ 
+Test Case Passed!
+ 
+Testing Lat = 0 for testcase dual.mergesort.asm!
+ 
+Test Case Passed!
+ 
+Testing Lat = 0 for testcase example.asm!
+ 
+Test Case Passed!
+ 
+Testing Lat = 0 for testcase palgorithm.asm!
+ 
