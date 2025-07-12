@@ -31,6 +31,12 @@ word_t next_pc, pc, portA1, portB1, portA2, portB2, write_selected1, write_selec
 logic control_pipe, stall_flag, misalignment, start, stall_check, switch1, PCWrite, if_id_write1, if_id_write2, if_flush, id_flush1, id_flush2, ex_flush, branch1, branch2, mem_dep, stall; 
 logic [2:0] forwardA1, forwardB1, forwardA2, forwardB2;
 
+
+logic id_flush1_buff, id_flush2_buff, stall_buff, jump_buff;
+assign id_flush1_buff = id_flush1;
+assign id_flush2_buff = id_flush2;
+assign stall_buff = stall_flag;
+assign jump_buff = cif1.jump;
   // ************************ INSTRUCTION FETCH / DECODE PIPELINE STRUCT ************************
   typedef struct packed {
     word_t instruction, pc_add, curr_pc;
@@ -80,7 +86,7 @@ control_unit cu1(cif1);
 control_unit cu2(cif2);
 forwarding_unit forward1(.id_ex_rsel1(id_ex1.rsel1), .id_ex_rsel2(id_ex1.rsel2), .ex_mem_wsel1(ex_mem1.wsel), .ex_mem_wsel2(ex_mem2.wsel), .mem_wb_wsel1(mem_wb1.wsel), .mem_wb_wsel2(mem_wb2.wsel), .ex_mem_regwrite1(ex_mem1.regwrite), .ex_mem_regwrite2(ex_mem2.regwrite), .mem_wb_regwrite1(mem_wb1.regwrite), .mem_wb_regwrite2(mem_wb2.regwrite), .forwardA(forwardA1), .forwardB(forwardB1));
 forwarding_unit forward2(.id_ex_rsel1(id_ex2.rsel1), .id_ex_rsel2(id_ex2.rsel2), .ex_mem_wsel1(ex_mem1.wsel), .ex_mem_wsel2(ex_mem2.wsel), .mem_wb_wsel1(mem_wb1.wsel), .mem_wb_wsel2(mem_wb2.wsel), .ex_mem_regwrite1(ex_mem1.regwrite), .ex_mem_regwrite2(ex_mem2.regwrite), .mem_wb_regwrite1(mem_wb1.regwrite), .mem_wb_regwrite2(mem_wb2.regwrite), .forwardA(forwardA2), .forwardB(forwardB2));
-hazard_unit hazarding(.branch(branch1 || branch2), .jump(cif1.jump || (cif2.jump && !stall_flag)), .halt(id_ex1.halt || (id_ex2.halt & !(branch1 || id_ex1.jalr))), .if_flush(if_flush), .id_flush1(id_flush1), .id_flush2(id_flush2), .id_ex_memread1(id_ex1.memread || id_ex1.lrsc), .id_ex_rd1(id_ex1.wsel), .id_ex_rd2(id_ex2.wsel), .if_id_rs1_1(rfif.rsel1_1), .if_id_rs2_1(rfif.rsel2_1), .id_ex_memread2(id_ex2.memread || id_ex2.lrsc), .if_id_rs1_2(rfif.rsel1_2), .if_id_rs2_2(rfif.rsel2_2), .PCWrite(PCWrite), .if_id_write1(if_id_write1), .if_id_write2(if_id_write2), .jalr(id_ex1.jalr || id_ex2.jalr));
+hazard_unit hazarding(.branch(branch1 || branch2), .jump(jump_buff || (cif2.jump && !stall_buff)), .halt(id_ex1.halt || (id_ex2.halt & !(branch1 || id_ex1.jalr))), .if_flush(if_flush), .id_flush1(id_flush1), .id_flush2(id_flush2), .id_ex_memread1(id_ex1.memread || id_ex1.lrsc), .id_ex_rd1(id_ex1.wsel), .id_ex_rd2(id_ex2.wsel), .if_id_rs1_1(rfif.rsel1_1), .if_id_rs2_1(rfif.rsel2_1), .id_ex_memread2(id_ex2.memread || id_ex2.lrsc), .if_id_rs1_2(rfif.rsel1_2), .if_id_rs2_2(rfif.rsel2_2), .PCWrite(PCWrite), .if_id_write1(if_id_write1), .if_id_write2(if_id_write2), .jalr(id_ex1.jalr || id_ex2.jalr));
 
 assign dpif.imemREN = 1'b1;
 assign control_pipe = (ex_mem1.memread | ex_mem1.memwrite | ex_mem2.memread | ex_mem2.memwrite) ? (dpif.dhit & dpif.ihit) : dpif.ihit;
@@ -91,9 +97,10 @@ assign rfif.rsel2_1 = cif1.rsel2;
 assign rfif.rsel1_2 = cif2.rsel1;
 assign rfif.rsel2_2 = cif2.rsel2;
 
+
 // ********************** PROGRAM COUNTER ************************** //
 
-assign stall = (branch1 || branch2 || cif1.jump || id_ex1.jalr || id_ex2.jalr) ? 1'b0 : stall_flag;
+assign stall = (if_flush) ? 1'b0 : stall_flag;
 always_ff @(posedge CLK, negedge nRST) begin
   if(!nRST) begin
     pc <= PC_INIT;
@@ -163,6 +170,7 @@ end
 
 //********************* START OF INSTRUCTION DECODE : EXECUTE (ID/EX) LATCH ********************* //
 
+
   always_ff @(posedge CLK, negedge nRST) begin 
     if(!nRST) begin
       id_ex1 <= '0;
@@ -200,7 +208,7 @@ end
   always_ff @(posedge CLK, negedge nRST) begin 
     if(!nRST) begin
       id_ex2 <= '0;
-    end else if ((id_flush2 || stall_flag || cif1.jump || id_flush1) & control_pipe) begin 
+    end else if ((id_flush2_buff || stall_buff || jump_buff || id_flush1_buff) & control_pipe) begin 
       id_ex2 <= '0;
     end else if (control_pipe) begin
       id_ex2.instruction <= if_id2.instruction;
@@ -285,39 +293,44 @@ assign aluif2.alu_op = id_ex2.alu_op;
 
 
 always_comb begin
-  write_selected1 = aluif1.result;
+  //write_selected1 = aluif1.result;
   casez({{id_ex1.switch1}, id_ex1.switch2})
     2'b10 : write_selected1 = id_ex1.pc_add;
     2'b01 : write_selected1 = id_ex1.u_type;
+    default : write_selected1 = aluif1.result;
   endcase
 end
 
 always_comb begin
-  write_selected2 = aluif2.result;
+  //write_selected2 = aluif2.result;
   casez({{id_ex2.switch1}, id_ex2.switch2})
     2'b10 : write_selected2 = id_ex2.pc_add;
     2'b01 : write_selected2 = id_ex2.u_type;
+    default : write_selected2 = aluif2.result;
   endcase
 end
+
 always_comb begin
-  branch1 = 1'b0;
+  //branch1 = 1'b0;
   casez(id_ex1.branch_type)
     2'd1 : branch1 = !((aluif1.rda == aluif1.rdb) ^ id_ex1.zero); 
     2'd2 : branch1 = !(($signed(aluif1.rda) >= $signed(aluif1.rdb)) ^ id_ex1.zero);
     2'd3 : branch1 = !(($unsigned(aluif1.rda) >= $unsigned(aluif1.rdb)) ^ id_ex1.zero);
+    default : branch1 = 1'b0;
   endcase
 end
 always_comb begin
-  branch2 = 1'b0;
+  //branch2 = 1'b0;
   casez(id_ex2.branch_type)
     2'd1 : branch2 = !((aluif2.rda == aluif2.rdb) ^ id_ex2.zero); 
     2'd2 : branch2 = !(($signed(aluif2.rda) >= $signed(aluif2.rdb)) ^ id_ex2.zero);
     2'd3 : branch2 = !(($unsigned(aluif2.rda) >= $unsigned(aluif2.rdb)) ^ id_ex2.zero);
+    default : branch2 = 1'b0;
   endcase
 end
 
 always_comb begin
-    next_pc = pc + 8;
+   // next_pc = pc + 32'd8;
     if((branch1 || branch2) || (id_ex1.jalr || id_ex2.jalr)) begin 
       casez({(branch1 || branch2), id_ex1.jalr || id_ex2.jalr})
         2'd3 : begin
@@ -325,13 +338,18 @@ always_comb begin
             next_pc = id_ex1.curr_pc + id_ex1.imm_gen;
           end else if (branch2 & id_ex1.jalr) begin
             next_pc = aluif1.result;
+          end else begin
+            next_pc = pc + 32'd8;
           end
         end
         2'd2 : next_pc = (branch1) ? id_ex1.curr_pc + id_ex1.imm_gen : id_ex2.curr_pc + id_ex2.imm_gen;
         2'd1 : next_pc = (id_ex1.jalr) ? aluif1.result : aluif2.result;
+        default : next_pc = pc + 32'd8;
       endcase
-    end else if (cif1.jump || (cif2.jump && !stall_flag)) begin 
+    end else if (cif1.jump || (cif2.jump && !stall_buff)) begin 
       next_pc = (cif1.jump) ? if_id1.curr_pc + cif1.imm_gen : if_id2.curr_pc + cif2.imm_gen;
+    end else begin
+      next_pc = pc + 32'd8;
     end
 end
 

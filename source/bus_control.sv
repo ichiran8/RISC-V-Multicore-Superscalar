@@ -6,7 +6,7 @@ module bus_control(
     input logic CLK, nRST,
     cache_control_if.cc cc
 );
-typedef enum logic [4:0] {
+typedef enum logic [5:0] {
     IDLE, IFETCH1, IBUF, IFETCH2, D_UPDATE_1, D_UPDATE_2, SNOOP_REQ, SNOOP_RESP, CACHE_UPDATE_1, CACHE_UPDATE_2, MEM_FETCH_1, MEM_FETCH_2, CACHE_MEM_UPDATE_1, CACHE_MEM_UPDATE_2, CACHE_INVALIDATE, WAIT_FETCH, WAIT_MEM, CACHE_INVALIDATE_CHECK
 } state_t;
 state_t state, next_state;
@@ -14,7 +14,6 @@ state_t state, next_state;
 logic core, lru, next_core, next_lru, data_read, data_write, inst_read, core0_req, core1_req, next_ramREN, next_ramWEN, invalidate_check;
 word_t next_ramaddr, next_ramstore;
 word_t [1:0] next_snoop_addr;
-logic [1:0] prev_ccwait, prev_ccwrite;
 logic [1:0] next_ccwait, next_ccinv;
 
 assign data_read = cc.dREN[0] | cc.dREN[1];
