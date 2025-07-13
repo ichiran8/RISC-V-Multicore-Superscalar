@@ -9,12 +9,10 @@
  start:
   ori   $4, $0, 0x01
    ori   $10, $0, 0x04
- 
   sw    $0, 0($2)            # set result to 0
    lw    $11, 4($2)            # load search variable into $11
    lw    $12, 8($2)            # load search length into $12
    addi $13, $2, 12           # search pointer is in $13
- 
 loop:
   lw    $14, 0($13)             # load element at pointer $13
    sub  $15, $14, $11            # compare loaded element with search var
@@ -28,6 +26,8 @@ loop:
  notfound:
   halt
 
+org 0x200
+halt
 
   org 0x80
 item_position:

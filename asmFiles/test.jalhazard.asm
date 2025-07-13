@@ -13,3 +13,6 @@ end:
     lw $17, 0x100($15)
     add $17, $17, $12
     halt
+
+org 0x200
+halt

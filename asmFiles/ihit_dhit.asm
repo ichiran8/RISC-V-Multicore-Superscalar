@@ -24,3 +24,6 @@ LOOP:
 END:
 
     HALT
+
+org 0x200
+halt

@@ -13,3 +13,6 @@ end:
     mv $12, $11
     sw $11, 0x100($11)
     halt
+
+org 0x200
+halt

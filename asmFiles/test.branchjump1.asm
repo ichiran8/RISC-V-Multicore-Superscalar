@@ -27,3 +27,6 @@ braR:
  jmpR:
   bne   $1, $11, end
    halt
+
+org 0x200
+halt
