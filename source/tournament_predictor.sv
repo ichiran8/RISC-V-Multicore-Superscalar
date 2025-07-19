@@ -1,6 +1,6 @@
 module tournament_predictor(
     input logic CLK, nRST, enable, branch_mispredicted1, branch_mispredicted2, prev_same_pred1, prev_same_pred2, dual_branch,
-    input logic jump_inst1, jump_inst2, if_id1_jump, if_id2_jump, jump_mispredicted1, jump_mispredicted2,
+    input logic jump_inst1, jump_inst2, if_id1_jump, if_id2_jump, 
     input logic [5:0] index1, index2, next_index1, next_index2, 
     input logic [31:0] pc, target1, target2, jump_target1, jump_target2,
     input logic [5:0] prev_ghr1, prev_ghr2, jump1_index, jump2_index,
