@@ -203,7 +203,7 @@ package cpu_types_pkg;
     logic [ITAG_W-1:0]  tag;
     
     logic [IIDX_W-1:0]  idx;
-    logic[ IBLK_W-1:0]  blkoff;
+    logic [IBLK_W-1:0]  blkoff;
     logic [IBYT_W-1:0]  bytoff;
   } icachef_t;
 

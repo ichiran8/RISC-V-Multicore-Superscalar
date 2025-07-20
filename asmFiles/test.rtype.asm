@@ -48,3 +48,6 @@
    #sw    $29,36($21)
    halt
 # that's all
+
+org 0x200
+halt

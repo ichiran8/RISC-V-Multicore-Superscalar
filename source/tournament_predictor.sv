@@ -1,11 +1,13 @@
 module tournament_predictor(
     input logic CLK, nRST, enable, branch_mispredicted1, branch_mispredicted2, prev_same_pred1, prev_same_pred2, dual_branch,
+    input logic jump_inst1, jump_inst2, if_id1_jump, if_id2_jump, 
     input logic [5:0] index1, index2, next_index1, next_index2, 
-    input logic [31:0] pc, target1, target2,
-    input logic [5:0] prev_ghr1, prev_ghr2,
-    input logic branch1, branch2, if_id1_branch, if_id2_branch, id_ex2_branch, id_ex1_branch, // if_id1_branchindicates it is a branch instruction from execute stage
+    input logic [31:0] pc, target1, target2, jump_target1, jump_target2,
+    input logic [5:0] prev_ghr1, prev_ghr2, jump1_index, jump2_index,
+    input logic [23:0] next_tag1, next_tag2, jump_tag1, jump_tag2,
+    input logic branch1, branch2, if_id1_branch, if_id2_branch, id_ex2_branch, id_ex1_branch,  // if_id1_branchindicates it is a branch instruction from execute stage
     output logic [31:0] predicted_pc,
-    output logic branch_predicted1, branch_predicted2, same_pred1, same_pred2,
+    output logic branch_predicted1, branch_predicted2, same_pred1, same_pred2, jump_predicted1, jump_predicted2,
     output logic [5:0] used_ghr1, used_ghr2
 );
 
@@ -43,6 +45,7 @@ logic [63:0][1:0] tournament_table, next_TT;
 
 typedef struct packed {
     logic [31:0] addr;
+    logic [23:0] tag;
     logic valid;
 } BTB;
 
@@ -68,28 +71,79 @@ always_ff @(posedge CLK, negedge nRST) begin
     if(!nRST) begin
         global_history_register <= '0;
         // we will only ever have one branch in the pipeline so this is not an issue
-    end else if(enable && id_ex1_branch) begin
-        global_history_register <= {global_history_register[4:0], branch1};
-    end else if (enable && id_ex2_branch) begin
-        global_history_register <= {global_history_register[4:0], branch2};
+    end else if(enable) begin
+        casez({id_ex1_branch, id_ex2_branch, if_id1_jump, if_id2_jump}) 
+            4'b1?00 : global_history_register <= {global_history_register[4:0], branch1};
+            4'b?100 : global_history_register <= {global_history_register[4:0], branch2};
+            4'b1?1? : global_history_register <= {global_history_register[3:0], branch1, 1'b1};
+            4'b1??1 : global_history_register <= {global_history_register[3:0], branch1, 1'b1};
+            4'b?11? : global_history_register <= {global_history_register[3:0], branch2, 1'b1};
+            4'b?1?1 : global_history_register <= {global_history_register[3:0], branch2, 1'b1};
+            4'b001? : global_history_register <= {global_history_register[4:0], 1'b1};
+            4'b00?1 : global_history_register <= {global_history_register[4:0], 1'b1};
+        endcase
     end
+    
 end
+
+
 assign used_ghr1 = global_history_register;
 assign used_ghr2 = global_history_register;
 // Buffer update stage ; we will update the buffer with the correct target
+// No more than 2 bits can be high on any given cycle
 always_comb begin
     next_BTB = branch_target_buffer;
     next_BHT = branch_history_table;
+    // casez({id_ex1_branch, id_ex2_branch, if_id1_jump, if_id2_jump}) 
+
+    //     4'b1000 : begin
+    //         //global_history_register <= {global_history_register[4:0], branch1};
+    //     end
+    //     4'b0100 : begin
+    //         global_history_register <= {global_history_register[4:0], branch2};
+    //     end
+    //     4'b1010 : begin 
+    //         global_history_register <= {global_history_register[3:0], branch1, 1'b1};
+    //     end
+    //     4'b1001 : begin 
+    //         global_history_register <= {global_history_register[3:0], branch1, 1'b1};
+    //     end
+    //     4'b0110 : begin 
+    //         global_history_register <= {global_history_register[3:0], branch2, 1'b1};
+    //     end
+    //     4'b0101 : begin 
+    //         global_history_register <= {global_history_register[3:0], branch2, 1'b1};
+    //     end
+    //     4'b0010 : begin 
+    //         global_history_register <= {global_history_register[4:0], 1'b1};
+    //     end
+    //     4'b0001 : begin 
+    //         global_history_register <= {global_history_register[4:0], 1'b1};
+    //     end
+    //endcase
     if(id_ex1_branch) begin
         next_BTB[next_index1].addr = target1; // update the buffer to store the target
         next_BTB[next_index1].valid = 1'b1; // make sure it is a valid entry 
+        next_BTB[next_index1].tag = next_tag1;
         next_BHT[next_index1] = {branch_history_table[next_index1][4:0], branch1}; // we update the branch history table entry   
     end else if(id_ex2_branch) begin
         next_BTB[next_index2].addr = target2;
         next_BTB[next_index2].valid = 1'b1;
+        next_BTB[next_index2].tag = next_tag2;
         next_BHT[next_index2] = {branch_history_table[next_index2][4:0], branch2};
     end 
+
+    if(if_id1_jump) begin
+        next_BTB[jump1_index].addr = jump_target1;
+        next_BTB[jump1_index].valid = 1'b1;
+        next_BTB[jump1_index].tag = jump_tag1;
+    end else if (if_id2_jump) begin
+        next_BTB[jump2_index].addr = jump_target2;
+        next_BTB[jump2_index].valid = 1'b1;
+        next_BTB[jump2_index].tag = jump_tag2;
+    end
 end
+
 
 
 // logic [1:0] output_index_update;
@@ -168,12 +222,16 @@ assign l_pred2 = local_pattern_history_table[branch_history_table[index2]][1];
 assign same_pred1 = (g_pred1 == l_pred1);
 assign same_pred2 = (g_pred2 == l_pred2);
 
+logic [31:0] pc2;
+assign pc2 = pc + 4;
 always_comb begin
     branch_predicted1 = 1'b0;
     branch_predicted2 = 1'b0;
-    predicted_pc = pc + 8;
+    predicted_pc = (dual_branch) ? pc + 4 : pc + 8;
+    jump_predicted1 = 1'b0;
+    jump_predicted2 = 1'b0;
     // instruction 1
-    if(if_id1_branch && branch_target_buffer[index1].valid) begin
+    if(if_id1_branch && branch_target_buffer[index1].valid && (branch_target_buffer[index1].tag == pc[31:8])) begin
         if(chosen_predictor == 2'd2) begin
             if(global_pattern_history_table[output_index][1]) begin
                 predicted_pc = branch_target_buffer[index1].addr;
@@ -191,8 +249,11 @@ always_comb begin
                 branch_predicted1 = 1'b0;
             end
         end
+    end else if (jump_inst1 && branch_target_buffer[index1].valid && branch_target_buffer[index1].tag == pc[31:8]) begin
+        predicted_pc = branch_target_buffer[index1].addr;
+        jump_predicted1 = 1'b1;
     // instruction 2
-    end else if(if_id2_branch && branch_target_buffer[index2].valid) begin
+    end else if(if_id2_branch && branch_target_buffer[index2].valid && (branch_target_buffer[index2].tag == pc2[31:8])) begin
         if(chosen_predictor == 2'd2) begin
             if(global_pattern_history_table[output_index][1]) begin
                 predicted_pc = branch_target_buffer[index2].addr;
@@ -210,6 +271,9 @@ always_comb begin
                 branch_predicted2 = 1'b0;
             end
         end
+    end else if (jump_inst2 && branch_target_buffer[index2].valid && branch_target_buffer[index2].tag == pc2[31:8]) begin
+        predicted_pc = branch_target_buffer[index2].addr;
+        jump_predicted2 = 1'b1;
     end
 end
 // if the previous chosen predictor was 2, the table we index has to be 2 or 3. Therefore we must check 

@@ -36,3 +36,7 @@ start:
 
   org 0x0F00
   cfw 22
+
+
+org 0x100
+halt

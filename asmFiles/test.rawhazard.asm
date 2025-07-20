@@ -7,3 +7,6 @@ addi $10, $11, 1
 
 sw $10, 100($0) 
 halt
+
+org 0x200
+halt

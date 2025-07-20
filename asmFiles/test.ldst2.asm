@@ -31,6 +31,8 @@
    sw    $7,12($10)
    halt      # that's all
 
+org 0x200
+halt
   org   0x0F00
   cfw   0x7337
   cfw   0x2701

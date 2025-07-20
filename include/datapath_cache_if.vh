@@ -32,7 +32,7 @@ interface datapath_cache_if;
 
   // datapath ports
   modport dp (
-    input   ihit, ihit2, imemload1, imemload2, dhit, dmemload,
+    input   ihit, imemload1, imemload2, dhit, dmemload,
     output  halt, imemREN, imemaddr1, imemaddr2, dmemREN, dmemWEN, datomic,
             dmemstore, dmemaddr
   );
@@ -47,7 +47,7 @@ interface datapath_cache_if;
   // icache ports
   modport icache (
     input   imemREN, imemaddr1, imemaddr2,
-    output  ihit, ihit2, imemload1, imemload2
+    output  ihit, imemload1, imemload2
   );
 
   // dcache ports

@@ -12,3 +12,6 @@ for:
     beq $0, $0, for
 end:
     halt
+
+org 0x200
+halt

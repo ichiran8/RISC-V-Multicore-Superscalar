@@ -12,3 +12,6 @@ end:
     sw $11, 0x100($10)
 
     halt
+
+org 0x200
+halt

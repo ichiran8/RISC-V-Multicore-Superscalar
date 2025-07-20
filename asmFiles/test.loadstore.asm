@@ -20,13 +20,14 @@
   lw    $11,0($4)
    lw    $12,4($4)
    lw    $13,8($4)
- 
   sw    $11,0($10)
    sw    $12,4($10)
    sw    $13,8($10)
    sw    $15,12($10)
    halt      # that's all
 
+org 0x200
+halt
   org   0x00F0
   cfw   0x7337
   cfw   0x2701
