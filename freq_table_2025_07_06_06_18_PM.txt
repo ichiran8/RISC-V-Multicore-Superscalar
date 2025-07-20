@@ -1,2 +1,0 @@
-Frequency Sweep Report File 2025_07_06_06_18_PM
-Frequency table for LAT = 0 85C Model

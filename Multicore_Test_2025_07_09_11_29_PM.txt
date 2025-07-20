@@ -1,5 +1,0 @@
-Multicore Assembly Test Case Report File 2025_07_09_11_29_PM
-******** TEST FOR LAT = 0 ********
- 
-Testing Lat = 0 for testcase test.coherence1.asm!
- 
