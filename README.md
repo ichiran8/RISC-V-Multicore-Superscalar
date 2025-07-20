@@ -1,3 +1,4 @@
+**DISCLAIMER** For any ECE Purdue student, do not even think about attempting this design for a computer architecture class or referencing it. It will be very obvious when your design choices are tailored as the following. This design is pretty out of scope for the course and you will not have the time to implement this given the course structure!  
 The following design is a RISC-V Central Processing Unit (CPU) with Dual-Core design for multithreading performance.
 
 1) Cache coherence is maintained with the MSI Cache Coherence Protocol
