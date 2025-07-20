@@ -12,5 +12,10 @@ The following design is a RISC-V Central Processing Unit (CPU) with Dual-Core de
 
 
 
-{Insert top level diagram}
+
+<img width="1194" height="583" alt="Screenshot 2025-07-19 at 11 09 14 PM" src="https://github.com/user-attachments/assets/633d645b-5f9d-4f06-b4d6-0e944084adc1" />
+
+
+Future Design:
+
 <img width="1032" height="480" alt="Screenshot 2025-07-19 at 11 08 23 PM" src="https://github.com/user-attachments/assets/ea1f29a3-deda-4df1-a8c6-7346118710be" />
