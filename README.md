@@ -10,7 +10,7 @@ The following design is a RISC-V Central Processing Unit (CPU) with Dual-Core de
 4) Instructions will be speculatively launched if next line predictor is taken
 5) Designed with a sequential consistency memory model
   --> Only one load or store is issued to the L-1 Dcache per core
-  --> Each cache is non blocking
+  --> Each cache is blocking
 
 
 
